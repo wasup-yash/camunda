@@ -72,7 +72,6 @@ public final class EngineConfiguration {
 
   private Duration batchOperationSchedulerInterval = DEFAULT_JOBS_TIMEOUT_POLLING_INTERVAL;
   private int batchOperationChunkSize = DEFAULT_BATCH_OPERATION_CHUNK_SIZE;
-  private int batchOperationDbChunkSize = DEFAULT_BATCH_OPERATION_DB_CHUNK_SIZE;
   private int batchOperationQueryPageSize = DEFAULT_BATCH_OPERATION_QUERY_PAGE_SIZE;
   private int batchOperationQueryInClauseSize = DEFAULT_BATCH_OPERATION_QUERY_IN_CLAUSE_SIZE;
   private int batchOperationQueryRetryMax = DEFAULT_BATCH_OPERATION_QUERY_RETRY_MAX;
@@ -220,15 +219,6 @@ public final class EngineConfiguration {
 
   public EngineConfiguration setBatchOperationChunkSize(final int batchOperationChunkSize) {
     this.batchOperationChunkSize = batchOperationChunkSize;
-    return this;
-  }
-
-  public int getBatchOperationDbChunkSize() {
-    return batchOperationDbChunkSize;
-  }
-
-  public EngineConfiguration setBatchOperationDbChunkSize(final int batchOperationDbChunkSize) {
-    this.batchOperationDbChunkSize = batchOperationDbChunkSize;
     return this;
   }
 
