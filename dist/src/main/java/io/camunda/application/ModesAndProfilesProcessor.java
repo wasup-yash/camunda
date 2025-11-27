@@ -50,13 +50,9 @@ public class ModesAndProfilesProcessor implements SpringApplicationRunListener {
   @Override
   public void environmentPrepared(
       ConfigurableBootstrapContext bootstrapContext, ConfigurableEnvironment environment) {
-    if (!isStandaloneCamunda) {
-      return;
-    }
-
     this.environment = environment;
 
-    if (modeAsInput()) {
+    if (getMode() != null && !getMode().isBlank() && isStandaloneCamunda) {
       configureWithMode();
     } else {
       configureWithProfiles();
@@ -97,19 +93,9 @@ public class ModesAndProfilesProcessor implements SpringApplicationRunListener {
   }
 
   private void configureWithProfiles() {
-    // no-op, for now.
-  }
-
-  private boolean modeAsInput() {
-    if (getMode() != null && !getMode().isBlank()) {
-      return true;
-    }
-
     if (environment.getActiveProfiles().length == 0) {
       environment.setActiveProfiles(DEFAULT_PROFILES.toArray(new String[0]));
     }
-
-    return false;
   }
 
   private String getMode() {
