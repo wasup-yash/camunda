@@ -24,7 +24,7 @@ public class ModesAndProfilesProcessor implements SpringApplicationRunListener {
 
   private static final Set<String> VALID_MODES = Set.of("all-in-one", "broker", "gateway");
 
-  private static Set<String> DEFAULT_PROFILES =
+  private static final Set<String> DEFAULT_PROFILES =
       Set.of(
           Profile.OPERATE.getId(),
           Profile.TASKLIST.getId(),
