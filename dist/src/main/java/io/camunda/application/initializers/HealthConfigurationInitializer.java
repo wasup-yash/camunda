@@ -151,11 +151,9 @@ public class HealthConfigurationInitializer
       healthIndicators.add(INDICATOR_NODE_ID_PROVIDER_READY);
     }
 
-    /*
     if (activeProfiles.contains(Profile.GATEWAY.getId())) {
       healthIndicators.add(INDICATOR_GATEWAY_STARTED);
     }
-    */
 
     if (secondaryStorageEnabled && activeProfiles.contains(Profile.OPERATE.getId())) {
       healthIndicators.add(INDICATOR_SPRING_READINESS_STATE);
