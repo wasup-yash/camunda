@@ -67,6 +67,7 @@ public class StandaloneCamunda {
             // https://docs.spring.io/spring-boot/docs/2.3.9.RELEASE/reference/html/spring-boot-features.html#boot-features-external-config
             // Default properties are only used, if not overridden by any other config
             .initializers(
+                /* TODO: Do we need to load all of these for all the modes? */
                 new DefaultAuthenticationInitializer(),
                 new HealthConfigurationInitializer(),
                 new WebappsConfigurationInitializer())

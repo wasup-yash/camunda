@@ -69,7 +69,7 @@ public class ModesAndProfilesProcessor implements SpringApplicationRunListener {
       setProperty("camunda.security.authentication.authorizations.enabled", "false", true);
     }
 
-    switch (getMode()) {
+    switch (getMode().toLowerCase()) {
       case "broker" -> {
         configureProfilesForBrokerMode();
         setProperty("zeebe.broker.gateway.enable", "false", true);
