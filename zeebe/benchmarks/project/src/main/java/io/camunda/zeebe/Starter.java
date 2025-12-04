@@ -20,16 +20,37 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.client.CamundaClient;
 import io.camunda.client.api.command.DeployResourceCommandStep1.DeployResourceCommandStep2;
+import io.camunda.client.api.search.sort.ProcessInstanceSort;
 import io.camunda.zeebe.config.AppCfg;
 import io.camunda.zeebe.config.StarterCfg;
+import io.camunda.zeebe.protocol.Protocol;
 import io.camunda.zeebe.util.logging.ThrottledLogger;
+<<<<<<< HEAD:zeebe/benchmarks/project/src/main/java/io/camunda/zeebe/Starter.java
+=======
+import io.camunda.zeebe.util.micrometer.MicrometerUtil;
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
+import io.micrometer.core.instrument.Timer;
+>>>>>>> b51a7893 (feat: add data availability metric):load-tests/load-tester/src/main/java/io/camunda/zeebe/Starter.java
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+<<<<<<< HEAD:zeebe/benchmarks/project/src/main/java/io/camunda/zeebe/Starter.java
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+=======
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+>>>>>>> b51a7893 (feat: add data availability metric):load-tests/load-tester/src/main/java/io/camunda/zeebe/Starter.java
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -50,6 +71,15 @@ public class Starter extends App {
   private static final TypeReference<HashMap<String, Object>> VARIABLES_TYPE_REF =
       new TypeReference<>() {};
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+<<<<<<< HEAD:zeebe/benchmarks/project/src/main/java/io/camunda/zeebe/Starter.java
+=======
+  private final StarterCfg starterCfg;
+  private Timer responseLatencyTimer;
+  private ScheduledExecutorService executorService;
+  private ScheduledExecutorService piCheckExecutorService;
+  private ConcurrentHashMap<Integer, Timer> partitionToTimerMap;
+  private CopyOnWriteArrayList<PiCreationResult> results;
+>>>>>>> b51a7893 (feat: add data availability metric):load-tests/load-tester/src/main/java/io/camunda/zeebe/Starter.java
 
   Starter(final AppCfg config) {
     super(config);
@@ -57,15 +87,38 @@ public class Starter extends App {
 
   @Override
   public void run() {
+<<<<<<< HEAD:zeebe/benchmarks/project/src/main/java/io/camunda/zeebe/Starter.java
     final StarterCfg starterCfg = config.getStarter();
     final int rate = starterCfg.getRate();
     final String processId = starterCfg.getProcessId();
     final BlockingQueue<Future<?>> requestFutures = new ArrayBlockingQueue<>(5_000);
 
+=======
+    partitionToTimerMap = new ConcurrentHashMap<>();
+    responseLatencyTimer =
+        MicrometerUtil.buildTimer(StarterLatencyMetricsDoc.RESPONSE_LATENCY).register(registry);
+    results = new CopyOnWriteArrayList<>();
+    partitionToTimerMap.put(
+        1,
+        MicrometerUtil.buildTimer(StarterLatencyMetricsDoc.DATA_AVAILABILITY_LATENCY)
+            .tag("partition", "1")
+            .register(registry));
+    partitionToTimerMap.put(
+        2,
+        MicrometerUtil.buildTimer(StarterLatencyMetricsDoc.DATA_AVAILABILITY_LATENCY)
+            .tag("partition", "2")
+            .register(registry));
+    partitionToTimerMap.put(
+        3,
+        MicrometerUtil.buildTimer(StarterLatencyMetricsDoc.DATA_AVAILABILITY_LATENCY)
+            .tag("partition", "3")
+            .register(registry));
+>>>>>>> b51a7893 (feat: add data availability metric):load-tests/load-tester/src/main/java/io/camunda/zeebe/Starter.java
     final CamundaClient client = createCamundaClient();
 
     printTopology(client);
 
+<<<<<<< HEAD:zeebe/benchmarks/project/src/main/java/io/camunda/zeebe/Starter.java
     final ScheduledExecutorService executorService =
         Executors.newScheduledThreadPool(starterCfg.getThreads());
 
@@ -103,6 +156,27 @@ public class Starter extends App {
 
     final ResponseChecker responseChecker = new ResponseChecker(requestFutures);
     responseChecker.start();
+=======
+    // setup to start instances on given rate
+    piCheckExecutorService = Executors.newScheduledThreadPool(20);
+    final CountDownLatch countDownLatch = new CountDownLatch(1);
+
+    piCheckExecutorService.scheduleAtFixedRate(
+        () -> {
+          try {
+            queryProcessInstances(client);
+          } catch (final Exception e) {
+            LOG.error("Failed to query process instances. Will retry...", e);
+          }
+        },
+        1000,
+        250,
+        TimeUnit.MILLISECONDS);
+
+    executorService = Executors.newScheduledThreadPool(starterCfg.getThreads());
+    final ScheduledFuture<?> scheduledTask =
+        scheduleProcessInstanceCreation(executorService, countDownLatch, client);
+>>>>>>> b51a7893 (feat: add data availability metric):load-tests/load-tester/src/main/java/io/camunda/zeebe/Starter.java
 
     Runtime.getRuntime()
         .addShutdownHook(
@@ -110,6 +184,7 @@ public class Starter extends App {
                 () -> {
                   if (!executorService.isShutdown()) {
                     executorService.shutdown();
+                    piCheckExecutorService.shutdown();
                     try {
                       executorService.awaitTermination(60, TimeUnit.SECONDS);
                     } catch (final InterruptedException e) {
@@ -132,7 +207,232 @@ public class Starter extends App {
 
     scheduledTask.cancel(true);
     executorService.shutdown();
+<<<<<<< HEAD:zeebe/benchmarks/project/src/main/java/io/camunda/zeebe/Starter.java
     responseChecker.close();
+=======
+    piCheckExecutorService.shutdown();
+  }
+
+  private void queryProcessInstances(final CamundaClient client) {
+    LOG.warn("Started {} process instances so far", results.size());
+    // request results for started instances
+
+    final PiCreationResult first = results.getFirst();
+    LOG.info("First result {} ", results.getFirst());
+    final long startTimeNanos = first.startTimeNanos;
+    LOG.info("StartTimeNanos {} ", startTimeNanos);
+    final long millis = TimeUnit.NANOSECONDS.toMillis(startTimeNanos);
+    LOG.info("millis {} ", millis);
+    final long startTimeEpochMillis = first.startTimeEpochMillis;
+    LOG.info("EpochMillis {} ", startTimeEpochMillis);
+    final Instant temporal = Instant.ofEpochMilli(startTimeEpochMillis);
+    LOG.info("Instant {} ", temporal);
+    final OffsetDateTime from = OffsetDateTime.from(temporal.atZone(ZoneId.of("UTC")));
+    LOG.info("OffsetDateTime {} ", from);
+    final List<Long> list = results.stream().map(k -> k.processInstanceKey).toList();
+
+    client
+        .newProcessInstanceSearchRequest()
+        .filter((f) -> f.processInstanceKey(key -> key.in(list)))
+        .sort(ProcessInstanceSort::startDate)
+        .send()
+        .whenCompleteAsync(
+            (resp, error) -> {
+              if (error != null) {
+                LOG.error("Error while requesting process instances", error);
+                return;
+              }
+
+              LOG.warn("Response items: {} ", resp.items().size());
+              resp.items()
+                  .forEach(
+                      pi -> {
+                        LOG.info(
+                            "PI {} - {} start {}",
+                            pi,
+                            pi.getProcessInstanceKey(),
+                            pi.getStartDate());
+                        for (final PiCreationResult waitingPI :
+                            Collections.unmodifiableList(results)) {
+
+                          // TODO do more efficient search
+                          final long processInstanceKey = waitingPI.processInstanceKey;
+                          if (processInstanceKey == pi.getProcessInstanceKey()) {
+                            final long durationNanos = System.nanoTime() - waitingPI.startTimeNanos;
+                            final long durationMillisNanos =
+                                System.currentTimeMillis() - waitingPI.startTimeNanos;
+                            LOG.warn(
+                                "Process instance {} retrieved in {} ms; {} ms (from epoch)",
+                                processInstanceKey,
+                                TimeUnit.NANOSECONDS.toMillis(durationNanos),
+                                durationMillisNanos);
+
+                            final int partitionId = Protocol.decodePartitionId(processInstanceKey);
+                            partitionToTimerMap
+                                .get(partitionId)
+                                .record(durationNanos, TimeUnit.NANOSECONDS);
+                            results.remove(waitingPI);
+                            break;
+                          }
+                          //                          else {
+                          //                            LOG.info(
+                          //                                "PI {} not match {}",
+                          //                                pi.getProcessInstanceKey(),
+                          //                                waitingPI.processInstanceKey);
+                          //                          }
+                        }
+                      });
+            },
+            piCheckExecutorService);
+  }
+
+  private ScheduledFuture<?> scheduleProcessInstanceCreation(
+      final ScheduledExecutorService executorService,
+      final CountDownLatch countDownLatch,
+      final CamundaClient client) {
+
+    final long intervalNanos = Math.floorDiv(NANOS_PER_SECOND, starterCfg.getRate());
+    LOG.info("Creating an instance every {}ns", intervalNanos);
+
+    final String variablesString = readVariables(starterCfg.getPayloadPath());
+    final Map<String, Object> baseVariables =
+        Collections.unmodifiableMap(deserializeVariables(variablesString));
+
+    final BooleanSupplier shouldContinue = createContinuationCondition(starterCfg);
+    final AtomicLong businessKey = new AtomicLong(0);
+
+    return executorService.scheduleAtFixedRate(
+        () -> {
+          if (!shouldContinue.getAsBoolean()) {
+            // signal completion of starter
+            countDownLatch.countDown();
+            return;
+          }
+
+          try {
+            final var vars = new HashMap<>(baseVariables);
+            vars.put(starterCfg.getBusinessKey(), businessKey.incrementAndGet());
+
+            final var startTime = System.nanoTime();
+            final CompletionStage<?> requestFuture;
+            if (starterCfg.isStartViaMessage()) {
+              requestFuture = startInstanceByMessagePublishing(client, vars);
+            } else if (starterCfg.isWithResults()) {
+              requestFuture =
+                  startInstanceWithAwaitingResult(client, starterCfg.getProcessId(), vars);
+            } else {
+              requestFuture = startInstance(client, startTime, starterCfg.getProcessId(), vars);
+            }
+            requestFuture.whenComplete(
+                (noop, error) -> {
+                  final long durationNanos = System.nanoTime() - startTime;
+                  responseLatencyTimer.record(durationNanos, TimeUnit.NANOSECONDS);
+                  if (error instanceof final StatusRuntimeException statusRuntimeException) {
+                    if (statusRuntimeException.getStatus().getCode() != Code.RESOURCE_EXHAUSTED) {
+                      // we don't want to flood the log
+                      THROTTLED_LOGGER.warn(
+                          "Error on creating new process instance with business key {}",
+                          businessKey.get(),
+                          error);
+                    }
+                  }
+                });
+          } catch (final Exception e) {
+            THROTTLED_LOGGER.error("Error on creating new process instance", e);
+          }
+        },
+        0,
+        intervalNanos,
+        TimeUnit.NANOSECONDS);
+  }
+
+  private CompletionStage<?> startInstance(
+      final CamundaClient client,
+      final long startTime,
+      final String processId,
+      final HashMap<String, Object> variables) {
+    return client
+        .newCreateInstanceCommand()
+        .bpmnProcessId(processId)
+        .latestVersion()
+        .variables(variables)
+        .send()
+        .thenApply(
+            (response) -> {
+              final long processInstanceKey = response.getProcessInstanceKey();
+              final long duration = Duration.ofNanos(System.nanoTime() - startTime).toMillis();
+              final long epochMilli = System.currentTimeMillis() - duration;
+              results.add(new PiCreationResult(processInstanceKey, startTime, epochMilli));
+              //              LOG.warn(
+              //              LOG.warn(
+              //                  "Process instance {} started at around {} (delay {} ms) try to get
+              // from API",
+              //                  processInstanceKey,
+              //                  Instant.ofEpochMilli(epochMilli),
+              //                  duration);
+              //              checkForProcessInstanceExistence(client, startTime,
+              // processInstanceKey);
+              return response;
+            });
+  }
+
+  private void checkForProcessInstanceExistence(
+      final CamundaClient client, final long startTime, final long processInstanceKey) {
+
+    final long duration = Duration.ofNanos(System.nanoTime() - startTime).toMillis();
+    LOG.warn(
+        "Process instance {} started at around {} (delay {} ms) try to get from API",
+        processInstanceKey,
+        Instant.ofEpochMilli(System.currentTimeMillis() - duration),
+        duration);
+    client
+        .newProcessInstanceGetRequest(processInstanceKey)
+        .send()
+        .whenCompleteAsync(
+            (resp, err) -> {
+              if (err != null) {
+                // on error, we need to retry
+                piCheckExecutorService.schedule(
+                    () -> checkForProcessInstanceExistence(client, startTime, processInstanceKey),
+                    100,
+                    TimeUnit.MILLISECONDS);
+                LOG.trace("Failed to get process instance {}", processInstanceKey, err);
+              } else {
+                final long durationNanos = System.nanoTime() - startTime;
+                LOG.warn(
+                    "Process instance {} retrieved in {} ms",
+                    processInstanceKey,
+                    durationNanos / 1_000_000);
+
+                final int partitionId = Protocol.decodePartitionId(processInstanceKey);
+                partitionToTimerMap.get(partitionId).record(durationNanos, TimeUnit.NANOSECONDS);
+              }
+            },
+            piCheckExecutorService);
+  }
+
+  private CompletionStage<?> startInstanceWithAwaitingResult(
+      final CamundaClient client, final String processId, final HashMap<String, Object> variables) {
+    return client
+        .newCreateInstanceCommand()
+        .bpmnProcessId(processId)
+        .latestVersion()
+        .variables(variables)
+        .withResult()
+        .requestTimeout(starterCfg.getWithResultsTimeout())
+        .send();
+  }
+
+  private CompletionStage<?> startInstanceByMessagePublishing(
+      final CamundaClient client, final Map<String, Object> variables) {
+    return client
+        .newPublishMessageCommand()
+        .messageName(starterCfg.getMsgName())
+        .correlationKey(UUID.randomUUID().toString())
+        .variables(variables)
+        .timeToLive(Duration.ZERO)
+        .send();
+>>>>>>> b51a7893 (feat: add data availability metric):load-tests/load-tester/src/main/java/io/camunda/zeebe/Starter.java
   }
 
   private static HashMap<String, Object> deserializeVariables(final String variablesString) {
