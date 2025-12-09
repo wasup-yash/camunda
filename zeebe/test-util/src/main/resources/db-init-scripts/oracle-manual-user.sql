@@ -1,3 +1,6 @@
+-- Connect to pluggable database
+ALTER SESSION SET CONTAINER = FREEPDB1;
+
 -- Create user with restricted privileges (user acts as schema in Oracle)
 CREATE USER camunda_user IDENTIFIED BY camunda_pass
   DEFAULT TABLESPACE USERS
@@ -13,11 +16,3 @@ GRANT CREATE PROCEDURE TO camunda_user;
 GRANT CREATE TRIGGER TO camunda_user;
 GRANT CREATE TYPE TO camunda_user;
 GRANT CREATE SYNONYM TO camunda_user;
-
--- Grant additional privileges needed for Liquibase and Camunda
-GRANT ALTER ANY TABLE TO camunda_user;
-GRANT DROP ANY TABLE TO camunda_user;
-GRANT SELECT ANY TABLE TO camunda_user;
-GRANT INSERT ANY TABLE TO camunda_user;
-GRANT UPDATE ANY TABLE TO camunda_user;
-GRANT DELETE ANY TABLE TO camunda_user;

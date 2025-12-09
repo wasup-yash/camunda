@@ -22,17 +22,25 @@ public final class ManualUserDatabaseContainerWrapper {
    * as the default JDBC URL but with a different database name.
    */
   public static String getJdbcUrl(final JdbcDatabaseContainer<?> container) {
-    if (container.getClass().getName().contains("PostgreSQL")) {
+    final String className = container.getClass().getName();
+    if (className.contains("PostgreSQL")) {
       return container.getJdbcUrl().replace("/test", "/camunda_manual");
-    } else if (container.getClass().getName().contains("MySQL")) {
+    } else if (className.contains("MySQL")) {
       return container.getJdbcUrl().replace("/test", "/camunda_manual");
-    } else if (container.getClass().getName().contains("MariaDB")) {
+    } else if (className.contains("MariaDB")) {
       return container.getJdbcUrl().replace("/test", "/camunda_manual");
-    } else if (container.getClass().getName().contains("Oracle")) {
-      // Oracle uses service name in connection string
+    } else if (className.contains("Oracle")) {
+      // Oracle: connect to pluggable database with user schema
+      // The user schema is the same as the username
       return container.getJdbcUrl();
-    } else if (container.getClass().getName().contains("MSSQL")) {
-      return container.getJdbcUrl().replace(";database=master", ";database=camunda_manual");
+    } else if (className.contains("MSSQL")) {
+      // For MSSQL, replace the default master database with our custom database
+      final String originalUrl = container.getJdbcUrl();
+      if (originalUrl.contains("database=")) {
+        return originalUrl.replaceFirst("database=[^;]+", "database=camunda_manual");
+      } else {
+        return originalUrl + ";database=camunda_manual";
+      }
     }
     return container.getJdbcUrl();
   }
