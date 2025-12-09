@@ -139,9 +139,9 @@ public class ManualUserDatabaseIT {
       final var reader = rdbmsService.getProcessInstanceReader();
       final var result = reader.findOne(1000L);
 
-      assertThat(result).isNotNull();
-      assertThat(result.processInstanceKey()).isEqualTo(1000L);
-      assertThat(result.processDefinitionId()).isEqualTo("test-process");
+      assertThat(result).isPresent();
+      assertThat(result.get().processInstanceKey()).isEqualTo(1000L);
+      assertThat(result.get().processDefinitionId()).isEqualTo("test-process");
 
       LOGGER.info("Successfully validated {} with manual user", testDb.name);
     } catch (final Exception e) {
