@@ -1,0 +1,23 @@
+-- Create user with restricted privileges (user acts as schema in Oracle)
+CREATE USER camunda_user IDENTIFIED BY camunda_pass
+  DEFAULT TABLESPACE USERS
+  TEMPORARY TABLESPACE TEMP
+  QUOTA UNLIMITED ON USERS;
+
+-- Grant necessary system privileges for Camunda operations
+GRANT CREATE SESSION TO camunda_user;
+GRANT CREATE TABLE TO camunda_user;
+GRANT CREATE VIEW TO camunda_user;
+GRANT CREATE SEQUENCE TO camunda_user;
+GRANT CREATE PROCEDURE TO camunda_user;
+GRANT CREATE TRIGGER TO camunda_user;
+GRANT CREATE TYPE TO camunda_user;
+GRANT CREATE SYNONYM TO camunda_user;
+
+-- Grant additional privileges needed for Liquibase and Camunda
+GRANT ALTER ANY TABLE TO camunda_user;
+GRANT DROP ANY TABLE TO camunda_user;
+GRANT SELECT ANY TABLE TO camunda_user;
+GRANT INSERT ANY TABLE TO camunda_user;
+GRANT UPDATE ANY TABLE TO camunda_user;
+GRANT DELETE ANY TABLE TO camunda_user;

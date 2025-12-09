@@ -145,4 +145,72 @@ public final class TestSearchContainers {
         .withStartupTimeout(Duration.ofMinutes(5))
         .acceptLicense();
   }
+
+  /**
+   * Creates a PostgreSQL container with a manually created database and user with restricted
+   * privileges. The user has only the necessary permissions to operate Camunda, simulating a
+   * production-like setup.
+   */
+  public static PostgreSQLContainer<?> createPostgresContainerWithManualUser() {
+    return new PostgreSQLContainer<>(POSTGRES_IMAGE)
+        .withDatabaseName("postgres") // Use default database
+        .withUsername("postgres") // Use superuser to create database and user
+        .withPassword("postgres")
+        .withInitScript("db-init-scripts/postgres-manual-user.sql")
+        .withStartupTimeout(Duration.ofMinutes(5));
+  }
+
+  /**
+   * Creates a MySQL container with a manually created database and user with restricted
+   * privileges. The user has only the necessary permissions to operate Camunda, simulating a
+   * production-like setup.
+   */
+  public static MySQLContainer<?> createMySQLContainerWithManualUser() {
+    return new MySQLContainer<>(MYSQL_IMAGE)
+        .withDatabaseName("mysql") // Use default database
+        .withUsername("root") // Use root to create database and user
+        .withPassword("root")
+        .withInitScript("db-init-scripts/mysql-manual-user.sql")
+        .withStartupTimeout(Duration.ofMinutes(5));
+  }
+
+  /**
+   * Creates a MariaDB container with a manually created database and user with restricted
+   * privileges. The user has only the necessary permissions to operate Camunda, simulating a
+   * production-like setup.
+   */
+  public static MariaDBContainer<?> createMariaDBContainerWithManualUser() {
+    return new MariaDBContainer<>(MARIADB_IMAGE)
+        .withDatabaseName("mysql") // Use default database
+        .withUsername("root") // Use root to create database and user
+        .withPassword("root")
+        .withInitScript("db-init-scripts/mariadb-manual-user.sql")
+        .withStartupTimeout(Duration.ofMinutes(5));
+  }
+
+  /**
+   * Creates an Oracle container with a manually created database and user with restricted
+   * privileges. The user has only the necessary permissions to operate Camunda, simulating a
+   * production-like setup.
+   */
+  public static OracleContainer createOracleContainerWithManualUser() {
+    return new OracleContainer(ORACLE_IMAGE)
+        .withDatabaseName("FREEPDB1") // Use pluggable database
+        .withUsername("system") // Use system user to create user
+        .withPassword("oracle")
+        .withInitScript("db-init-scripts/oracle-manual-user.sql")
+        .withStartupTimeout(Duration.ofMinutes(5));
+  }
+
+  /**
+   * Creates a MSSQL Server container with a manually created database and user with restricted
+   * privileges. The user has only the necessary permissions to operate Camunda, simulating a
+   * production-like setup.
+   */
+  public static MSSQLServerContainer<?> createMSSQLServerContainerWithManualUser() {
+    return new MSSQLServerContainer<>(MSSQLSERVER_IMAGE)
+        .withInitScript("db-init-scripts/mssql-manual-user.sql")
+        .withStartupTimeout(Duration.ofMinutes(5))
+        .acceptLicense();
+  }
 }
