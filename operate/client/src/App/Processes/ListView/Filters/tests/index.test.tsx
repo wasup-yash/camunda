@@ -47,11 +47,13 @@ describe('Filters', () => {
       wrapper: getWrapper(),
     });
 
-    await waitFor(() => expect(screen.getByLabelText('Name')).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', {name: 'Name'})).toBeEnabled(),
+    );
     await selectProcess({user, option: 'Big variable process'});
 
     expect(
-      screen.getByLabelText('Version', {selector: 'button'}),
+      screen.getByRole('combobox', {name: 'Select a Process Version'}),
     ).toBeEnabled();
     await selectProcessVersion({user, option: '1'});
 
@@ -97,10 +99,14 @@ describe('Filters', () => {
       }),
     ).toHaveValue('Big variable process');
     expect(
-      screen.getByLabelText('Version', {selector: 'button'}),
+      screen.getByRole('combobox', {
+        name: 'Select a Process Version',
+      }),
     ).toHaveTextContent('1');
 
-    expect(screen.getByLabelText('Flow Node')).toHaveValue('Service Task 1');
+    expect(screen.getByRole('combobox', {name: 'Flow Node'})).toHaveTextContent(
+      'Service Task 1',
+    );
 
     expect(screen.getByDisplayValue(MOCK_PARAMS.ids)).toBeInTheDocument();
 
@@ -142,8 +148,9 @@ describe('Filters', () => {
       wrapper: getWrapper(initialPath),
     });
 
-    // Wait for data to be fetched
-    await waitFor(() => expect(screen.getByLabelText('Name')).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', {name: 'Name'})).toBeEnabled(),
+    );
 
     // Hidden fields
     expect(
@@ -186,17 +193,18 @@ describe('Filters', () => {
       wrapper: getWrapper(),
     });
 
-    // Wait for data to be fetched
-    await waitFor(() => expect(screen.getByLabelText('Name')).toBeEnabled());
     await waitFor(() =>
-      expect(screen.getByLabelText('Flow Node')).toBeEnabled(),
+      expect(screen.getByRole('combobox', {name: 'Name'})).toBeEnabled(),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', {name: 'Flow Node'})).toBeEnabled(),
     );
 
-    expect(screen.getByLabelText('Name')).toHaveValue('');
+    expect(screen.getByRole('combobox', {name: 'Name'})).toHaveValue('');
     expect(
       screen.getByLabelText('Version', {selector: 'button'}),
     ).toBeDisabled();
-    expect(screen.getByLabelText('Flow Node')).toHaveValue('');
+    expect(screen.getByRole('combobox', {name: 'Flow Node'})).toHaveValue('');
     expect(screen.getByRole('checkbox', {name: 'Active'})).not.toBeChecked();
     expect(screen.getByRole('checkbox', {name: 'Incidents'})).not.toBeChecked();
     expect(screen.getByRole('checkbox', {name: 'Completed'})).not.toBeChecked();
@@ -269,10 +277,12 @@ describe('Filters', () => {
       wrapper: getWrapper(),
     });
 
-    await waitFor(() => expect(screen.getByLabelText('Name')).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', {name: 'Name'})).toBeEnabled(),
+    );
 
     await waitFor(() =>
-      expect(screen.getByLabelText('Flow Node')).toBeEnabled(),
+      expect(screen.getByRole('combobox', {name: 'Flow Node'})).toBeEnabled(),
     );
 
     await user.click(screen.getByRole('button', {name: 'More Filters'}));
