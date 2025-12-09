@@ -1,8 +1,5 @@
--- Create user with restricted privileges
-CREATE USER camunda_user WITH PASSWORD 'camunda_pass';
+-- Create user with restricted privileges for manual user testing
+CREATE USER camunda_user WITH PASSWORD 'Camunda_Pass123!';
 
--- Create database for Camunda
-CREATE DATABASE camunda_manual OWNER camunda_user;
-
--- Grant connection privilege
-GRANT ALL PRIVILEGES ON DATABASE camunda_manual TO camunda_user;
+-- Grant all privileges on camunda database to camunda_user
+GRANT ALL PRIVILEGES ON DATABASE camunda TO camunda_user;

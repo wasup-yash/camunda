@@ -1,12 +1,8 @@
--- Create database for Camunda
-CREATE DATABASE camunda_manual;
+-- Switch to the camunda database
+USE camunda;
 GO
 
--- Switch to the new database
-USE camunda_manual;
-GO
-
--- Create login and user with restricted privileges
+-- Create login and user with restricted privileges for manual user testing
 -- Note: Password is hardcoded for testing purposes only
 CREATE LOGIN camunda_user WITH PASSWORD = 'Camunda_Pass123!';
 GO

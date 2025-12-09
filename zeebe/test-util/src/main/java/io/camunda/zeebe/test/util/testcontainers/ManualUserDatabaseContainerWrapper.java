@@ -22,30 +22,11 @@ public final class ManualUserDatabaseContainerWrapper {
   private ManualUserDatabaseContainerWrapper() {}
 
   /**
-   * Returns the JDBC URL for connecting with the manual user. For most databases this is the same
-   * as the default JDBC URL but with a different database name.
+   * Returns the JDBC URL for connecting with the manual user. For most databases this connects
+   * to the camunda database.
    */
   public static String getJdbcUrl(final JdbcDatabaseContainer<?> container) {
-    final String className = container.getClass().getName();
-    if (className.contains("PostgreSQL")) {
-      return container.getJdbcUrl().replace("/test", "/camunda_manual");
-    } else if (className.contains("MySQL")) {
-      return container.getJdbcUrl().replace("/test", "/camunda_manual");
-    } else if (className.contains("MariaDB")) {
-      return container.getJdbcUrl().replace("/test", "/camunda_manual");
-    } else if (className.contains("Oracle")) {
-      // Oracle: connect to pluggable database with user schema
-      // The user schema is the same as the username
-      return container.getJdbcUrl();
-    } else if (className.contains("MSSQL")) {
-      // For MSSQL, replace the default master database with our custom database
-      final String originalUrl = container.getJdbcUrl();
-      if (originalUrl.contains("database=")) {
-        return originalUrl.replaceFirst("database=[^;]+", "database=camunda_manual");
-      } else {
-        return originalUrl + ";database=camunda_manual";
-      }
-    }
+    // All databases use the camunda database with the init script
     return container.getJdbcUrl();
   }
 
@@ -60,9 +41,6 @@ public final class ManualUserDatabaseContainerWrapper {
    * Returns the password for the manual user with restricted privileges.
    */
   public static String getPassword(final JdbcDatabaseContainer<?> container) {
-    if (container.getClass().getName().contains("MSSQL")) {
-      return "Camunda_Pass123!";
-    }
-    return "camunda_pass";
+    return "Camunda_Pass123!";
   }
 }

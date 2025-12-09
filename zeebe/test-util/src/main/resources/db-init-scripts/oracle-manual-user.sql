@@ -1,8 +1,8 @@
 -- Connect to pluggable database
 ALTER SESSION SET CONTAINER = FREEPDB1;
 
--- Create user with restricted privileges (user acts as schema in Oracle)
-CREATE USER camunda_user IDENTIFIED BY camunda_pass
+-- Create user with restricted privileges for manual user testing (user acts as schema in Oracle)
+CREATE USER camunda_user IDENTIFIED BY "Camunda_Pass123!"
   DEFAULT TABLESPACE USERS
   TEMPORARY TABLESPACE TEMP
   QUOTA UNLIMITED ON USERS;
