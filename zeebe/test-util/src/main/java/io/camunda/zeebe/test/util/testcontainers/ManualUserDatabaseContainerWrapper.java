@@ -7,6 +7,10 @@
  */
 package io.camunda.zeebe.test.util.testcontainers;
 
+import static io.camunda.zeebe.test.util.testcontainers.TestSearchContainers.CAMUNDA_MANUAL_DATABASE;
+import static io.camunda.zeebe.test.util.testcontainers.TestSearchContainers.CAMUNDA_MANUAL_PASSWORD;
+import static io.camunda.zeebe.test.util.testcontainers.TestSearchContainers.CAMUNDA_MANUAL_USER;
+
 import org.testcontainers.containers.JdbcDatabaseContainer;
 
 /**
@@ -22,25 +26,44 @@ public final class ManualUserDatabaseContainerWrapper {
   private ManualUserDatabaseContainerWrapper() {}
 
   /**
-   * Returns the JDBC URL for connecting with the manual user. For most databases this connects
-   * to the camunda database.
+   * Returns the JDBC URL for connecting with the manual user. This connects to the camunda_manual
+   * database.
    */
   public static String getJdbcUrl(final JdbcDatabaseContainer<?> container) {
-    // All databases use the camunda database with the init script
-    return container.getJdbcUrl();
+    final String className = container.getClass().getName();
+    final String originalUrl = container.getJdbcUrl();
+
+    if (className.contains("PostgreSQL")) {
+      // Replace /test or /camunda with /camunda_manual
+      return originalUrl.replaceFirst("/[^/]+$", "/" + CAMUNDA_MANUAL_DATABASE);
+    } else if (className.contains("MySQL") || className.contains("MariaDB")) {
+      // Replace /test or /camunda with /camunda_manual
+      return originalUrl.replaceFirst("/[^?]+", "/" + CAMUNDA_MANUAL_DATABASE);
+    } else if (className.contains("Oracle")) {
+      // Oracle: connect to the camunda_user schema
+      return originalUrl;
+    } else if (className.contains("MSSQL")) {
+      // For MSSQL, replace the database parameter
+      if (originalUrl.contains("database=")) {
+        return originalUrl.replaceFirst("database=[^;]+", "database=" + CAMUNDA_MANUAL_DATABASE);
+      } else {
+        return originalUrl + ";database=" + CAMUNDA_MANUAL_DATABASE;
+      }
+    }
+    return originalUrl;
   }
 
   /**
    * Returns the username for the manual user with restricted privileges.
    */
   public static String getUsername(final JdbcDatabaseContainer<?> container) {
-    return "camunda_user";
+    return CAMUNDA_MANUAL_USER;
   }
 
   /**
    * Returns the password for the manual user with restricted privileges.
    */
   public static String getPassword(final JdbcDatabaseContainer<?> container) {
-    return "Camunda_Pass123!";
+    return CAMUNDA_MANUAL_PASSWORD;
   }
 }

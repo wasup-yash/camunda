@@ -49,6 +49,15 @@ public final class TestSearchContainers {
   private static final DockerImageName ORACLE_IMAGE =
       DockerImageName.parse("gvenzl/oracle-free").withTag("slim");
 
+  /** Database name for manual user testing with restricted privileges */
+  public static final String CAMUNDA_MANUAL_DATABASE = "camunda_manual";
+
+  /** Username for manual user testing with restricted privileges */
+  public static final String CAMUNDA_MANUAL_USER = "camunda_user";
+
+  /** Password for manual user testing with restricted privileges */
+  public static final String CAMUNDA_MANUAL_PASSWORD = "Camunda_Pass123!";
+
   private TestSearchContainers() {}
 
   /**

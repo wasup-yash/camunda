@@ -1,5 +1,9 @@
--- Switch to the camunda database
-USE camunda;
+-- Create database for manual user testing
+CREATE DATABASE camunda_manual;
+GO
+
+-- Switch to the camunda_manual database
+USE camunda_manual;
 GO
 
 -- Create login and user with restricted privileges for manual user testing
@@ -10,25 +14,27 @@ GO
 CREATE USER camunda_user FOR LOGIN camunda_user;
 GO
 
--- Grant necessary privileges for Camunda operations
+-- Grant specific privileges for Camunda operations directly to the user
+-- Schema and table operations
 GRANT CREATE TABLE TO camunda_user;
+GRANT ALTER TO camunda_user;
+GRANT DROP TO camunda_user;
+
+-- View operations
 GRANT CREATE VIEW TO camunda_user;
+
+-- Procedure and function operations
 GRANT CREATE PROCEDURE TO camunda_user;
 GRANT CREATE FUNCTION TO camunda_user;
-GRANT ALTER TO camunda_user;
+
+-- CRUD operations
 GRANT SELECT TO camunda_user;
 GRANT INSERT TO camunda_user;
 GRANT UPDATE TO camunda_user;
 GRANT DELETE TO camunda_user;
+
+-- Additional operations
 GRANT EXECUTE TO camunda_user;
 GRANT REFERENCES TO camunda_user;
-GO
-
--- Add user to db_ddladmin role for schema management (needed for Liquibase)
-ALTER ROLE db_ddladmin ADD MEMBER camunda_user;
-GO
-
--- Add user to db_datareader and db_datawriter roles
-ALTER ROLE db_datareader ADD MEMBER camunda_user;
-ALTER ROLE db_datawriter ADD MEMBER camunda_user;
+GRANT CONTROL TO camunda_user;
 GO
