@@ -16,7 +16,6 @@ import io.camunda.it.rdbms.db.fixtures.ProcessInstanceFixtures;
 import io.camunda.it.rdbms.db.util.CamundaRdbmsInvocationContextProviderExtension;
 import io.camunda.it.rdbms.db.util.CamundaRdbmsTestApplication;
 import io.camunda.search.entities.ProcessInstanceEntity.ProcessInstanceState;
-import io.camunda.zeebe.test.util.testcontainers.ManualUserDatabaseContainerWrapper;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -71,8 +70,6 @@ public class ManualUserDatabaseIT {
     assertThat(result.get().processInstanceKey()).isEqualTo(processInstanceKey);
     assertThat(result.get().processDefinitionId()).isEqualTo("test-process-manual-user");
 
-    LOGGER.info(
-        "Successfully validated manual user with username: {} and password complexity",
-        ManualUserDatabaseContainerWrapper.getUsername(null));
+    LOGGER.info("Successfully validated manual user with restricted privileges");
   }
 }
