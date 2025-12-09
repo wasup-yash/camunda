@@ -7,6 +7,7 @@ USE camunda_manual;
 GO
 
 -- Create login and user with restricted privileges
+-- Note: Password is hardcoded for testing purposes only
 CREATE LOGIN camunda_user WITH PASSWORD = 'Camunda_Pass123!';
 GO
 

@@ -12,6 +12,10 @@ import org.testcontainers.containers.JdbcDatabaseContainer;
 /**
  * Wrapper for JDBC database containers that provides manual user credentials. This is used to test
  * Camunda with database users that have restricted privileges, simulating production-like setups.
+ *
+ * <p>Note: This class uses string matching on container class names to avoid adding dependencies
+ * on all testcontainers database modules. The passwords are hardcoded as this is only for testing
+ * purposes.
  */
 public final class ManualUserDatabaseContainerWrapper {
 
