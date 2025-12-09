@@ -18,7 +18,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON camunda_manual.* TO 'camunda_user'@'%';
 GRANT CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE ON camunda_manual.* TO 'camunda_user'@'%';
 
 -- Additional operations for Camunda
-GRANT CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, TRIGGER ON camunda_manual.* TO 'camunda_user'@'%';
+GRANT CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, TRIGGER, DROP ON camunda_manual.* TO 'camunda_user'@'%';
 
 -- Flush privileges to ensure they take effect
 FLUSH PRIVILEGES;
