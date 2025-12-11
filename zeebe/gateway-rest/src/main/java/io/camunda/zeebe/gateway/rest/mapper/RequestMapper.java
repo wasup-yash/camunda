@@ -8,7 +8,8 @@
 package io.camunda.zeebe.gateway.rest.mapper;
 
 import static io.camunda.zeebe.gateway.rest.validator.AdHocSubProcessActivityRequestValidator.validateAdHocSubProcessActivationRequest;
-import static io.camunda.zeebe.gateway.rest.validator.AuthorizationRequestValidator.validateAuthorizationRequest;
+import static io.camunda.zeebe.gateway.rest.validator.AuthorizationRequestValidator.validateIdBasedRequest;
+import static io.camunda.zeebe.gateway.rest.validator.AuthorizationRequestValidator.validatePropertyBasedRequest;
 import static io.camunda.zeebe.gateway.rest.validator.ClockValidator.validateClockPinRequest;
 import static io.camunda.zeebe.gateway.rest.validator.DocumentValidator.validateDocumentLinkParams;
 import static io.camunda.zeebe.gateway.rest.validator.DocumentValidator.validateDocumentMetadata;
@@ -41,6 +42,7 @@ import io.camunda.service.AdHocSubProcessActivityServices.AdHocSubProcessActivat
 import io.camunda.service.AdHocSubProcessActivityServices.AdHocSubProcessActivateActivitiesRequest.AdHocSubProcessActivateActivityReference;
 import io.camunda.service.AuthorizationServices.CreateAuthorizationRequest;
 import io.camunda.service.AuthorizationServices.UpdateAuthorizationRequest;
+import io.camunda.service.ClusterVariableServices.ClusterVariableRequest;
 import io.camunda.service.DocumentServices.DocumentCreateRequest;
 import io.camunda.service.DocumentServices.DocumentLinkParams;
 import io.camunda.service.ElementInstanceServices.SetVariablesRequest;
@@ -66,14 +68,18 @@ import io.camunda.service.TenantServices.TenantMemberRequest;
 import io.camunda.service.TenantServices.TenantRequest;
 import io.camunda.service.UserServices.UserDTO;
 import io.camunda.zeebe.gateway.protocol.rest.AdHocSubProcessActivateActivitiesInstruction;
+import io.camunda.zeebe.gateway.protocol.rest.AuthorizationIdBasedRequest;
+import io.camunda.zeebe.gateway.protocol.rest.AuthorizationPropertyBasedRequest;
 import io.camunda.zeebe.gateway.protocol.rest.AuthorizationRequest;
 import io.camunda.zeebe.gateway.protocol.rest.CancelProcessInstanceRequest;
 import io.camunda.zeebe.gateway.protocol.rest.Changeset;
 import io.camunda.zeebe.gateway.protocol.rest.ClockPinRequest;
+import io.camunda.zeebe.gateway.protocol.rest.CreateClusterVariableRequest;
 import io.camunda.zeebe.gateway.protocol.rest.DecisionEvaluationById;
 import io.camunda.zeebe.gateway.protocol.rest.DecisionEvaluationByKey;
 import io.camunda.zeebe.gateway.protocol.rest.DecisionEvaluationInstruction;
 import io.camunda.zeebe.gateway.protocol.rest.DeleteResourceRequest;
+import io.camunda.zeebe.gateway.protocol.rest.DirectAncestorKeyInstruction;
 import io.camunda.zeebe.gateway.protocol.rest.DocumentLinkRequest;
 import io.camunda.zeebe.gateway.protocol.rest.DocumentMetadata;
 import io.camunda.zeebe.gateway.protocol.rest.GroupCreateRequest;
@@ -89,6 +95,7 @@ import io.camunda.zeebe.gateway.protocol.rest.MappingRuleCreateRequest;
 import io.camunda.zeebe.gateway.protocol.rest.MappingRuleUpdateRequest;
 import io.camunda.zeebe.gateway.protocol.rest.MessageCorrelationRequest;
 import io.camunda.zeebe.gateway.protocol.rest.MessagePublicationRequest;
+import io.camunda.zeebe.gateway.protocol.rest.ModifyProcessInstanceVariableInstruction;
 import io.camunda.zeebe.gateway.protocol.rest.PermissionTypeEnum;
 import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceCreationInstruction;
 import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceCreationInstructionById;
@@ -99,6 +106,8 @@ import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceMigrationInstructio
 import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceModificationBatchOperationRequest;
 import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceModificationInstruction;
 import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceModificationMoveBatchOperationInstruction;
+import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceModificationTerminateByIdInstruction;
+import io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceModificationTerminateByKeyInstruction;
 import io.camunda.zeebe.gateway.protocol.rest.RoleCreateRequest;
 import io.camunda.zeebe.gateway.protocol.rest.RoleUpdateRequest;
 import io.camunda.zeebe.gateway.protocol.rest.SetVariableRequest;
@@ -112,6 +121,7 @@ import io.camunda.zeebe.gateway.protocol.rest.UserTaskUpdateRequest;
 import io.camunda.zeebe.gateway.protocol.rest.UserUpdateRequest;
 import io.camunda.zeebe.gateway.rest.mapper.search.SearchQueryFilterMapper;
 import io.camunda.zeebe.gateway.rest.util.KeyUtil;
+import io.camunda.zeebe.gateway.rest.validator.ClusterVariableRequestValidator;
 import io.camunda.zeebe.gateway.rest.validator.DocumentValidator;
 import io.camunda.zeebe.gateway.rest.validator.GroupRequestValidator;
 import io.camunda.zeebe.gateway.rest.validator.MappingRuleRequestValidator;
@@ -119,7 +129,6 @@ import io.camunda.zeebe.gateway.rest.validator.RoleRequestValidator;
 import io.camunda.zeebe.gateway.rest.validator.TenantRequestValidator;
 import io.camunda.zeebe.gateway.rest.validator.UserRequestValidator;
 import io.camunda.zeebe.protocol.impl.encoding.MsgPackConverter;
-import io.camunda.zeebe.protocol.impl.record.value.batchoperation.BatchOperationProcessInstanceModificationMoveInstruction;
 import io.camunda.zeebe.protocol.impl.record.value.job.JobResult;
 import io.camunda.zeebe.protocol.impl.record.value.job.JobResultActivateElement;
 import io.camunda.zeebe.protocol.impl.record.value.job.JobResultCorrections;
@@ -127,11 +136,14 @@ import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstan
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceCreationStartInstruction;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceMigrationMappingInstruction;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceModificationActivateInstruction;
+import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceModificationMoveInstruction;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceModificationTerminateInstruction;
 import io.camunda.zeebe.protocol.impl.record.value.processinstance.ProcessInstanceModificationVariableInstruction;
 import io.camunda.zeebe.protocol.impl.record.value.usertask.UserTaskRecord;
 import io.camunda.zeebe.protocol.record.value.AuthorizationOwnerType;
+import io.camunda.zeebe.protocol.record.value.AuthorizationResourceMatcher;
 import io.camunda.zeebe.protocol.record.value.AuthorizationResourceType;
+import io.camunda.zeebe.protocol.record.value.AuthorizationScope;
 import io.camunda.zeebe.protocol.record.value.EntityType;
 import io.camunda.zeebe.protocol.record.value.JobResultType;
 import io.camunda.zeebe.protocol.record.value.PermissionType;
@@ -343,7 +355,20 @@ public class RequestMapper {
       final EntityType entityType,
       final Pattern identifierPattern) {
     return getResult(
-        RoleRequestValidator.validateMemberRequest(roleId, memberId, entityType, identifierPattern),
+        RoleRequestValidator.validateMemberRequest(
+            roleId, memberId, entityType, identifierPattern, identifierPattern),
+        () -> new RoleMemberRequest(roleId, memberId, entityType));
+  }
+
+  public static Either<ProblemDetail, RoleMemberRequest> toRoleMemberRequest(
+      final String roleId,
+      final String memberId,
+      final EntityType entityType,
+      final Pattern roleIdentifierPattern,
+      final Pattern memberIdentifierPattern) {
+    return getResult(
+        RoleRequestValidator.validateMemberRequest(
+            roleId, memberId, entityType, roleIdentifierPattern, memberIdentifierPattern),
         () -> new RoleMemberRequest(roleId, memberId, entityType));
   }
 
@@ -382,29 +407,106 @@ public class RequestMapper {
 
   public static Either<ProblemDetail, CreateAuthorizationRequest> toCreateAuthorizationRequest(
       final AuthorizationRequest request, final Pattern idPattern) {
+    return switch (request) {
+      case final AuthorizationIdBasedRequest idReq ->
+          toCreateAuthorizationRequest(idReq, idPattern);
+      case final AuthorizationPropertyBasedRequest propReq ->
+          toCreateAuthorizationRequest(propReq, idPattern);
+      default -> Either.left(createUnsupportedAuthorizationProblemDetail(request));
+    };
+  }
+
+  public static Either<ProblemDetail, CreateAuthorizationRequest> toCreateAuthorizationRequest(
+      final AuthorizationIdBasedRequest request, final Pattern idPattern) {
     return getResult(
-        validateAuthorizationRequest(request, idPattern),
+        validateIdBasedRequest(request, idPattern),
         () ->
             new CreateAuthorizationRequest(
                 request.getOwnerId(),
                 AuthorizationOwnerType.valueOf(request.getOwnerType().name()),
+                resolveIdBasedResourceMatcher(request.getResourceId()),
                 request.getResourceId(),
+                "",
+                AuthorizationResourceType.valueOf(request.getResourceType().name()),
+                transformPermissionTypes(request.getPermissionTypes())));
+  }
+
+  public static Either<ProblemDetail, CreateAuthorizationRequest> toCreateAuthorizationRequest(
+      final AuthorizationPropertyBasedRequest request, final Pattern idPattern) {
+
+    return getResult(
+        validatePropertyBasedRequest(request, idPattern),
+        () ->
+            new CreateAuthorizationRequest(
+                request.getOwnerId(),
+                AuthorizationOwnerType.valueOf(request.getOwnerType().name()),
+                AuthorizationResourceMatcher.PROPERTY,
+                "",
+                request.getResourcePropertyName(),
                 AuthorizationResourceType.valueOf(request.getResourceType().name()),
                 transformPermissionTypes(request.getPermissionTypes())));
   }
 
   public static Either<ProblemDetail, UpdateAuthorizationRequest> toUpdateAuthorizationRequest(
       final long authorizationKey, final AuthorizationRequest request, final Pattern idPattern) {
+    return switch (request) {
+      case final AuthorizationIdBasedRequest idReq ->
+          toUpdateAuthorizationRequest(authorizationKey, idReq, idPattern);
+      case final AuthorizationPropertyBasedRequest propReq ->
+          toUpdateAuthorizationRequest(authorizationKey, propReq, idPattern);
+      default -> Either.left(createUnsupportedAuthorizationProblemDetail(request));
+    };
+  }
+
+  public static Either<ProblemDetail, UpdateAuthorizationRequest> toUpdateAuthorizationRequest(
+      final long authorizationKey,
+      final AuthorizationIdBasedRequest request,
+      final Pattern idPattern) {
     return getResult(
-        validateAuthorizationRequest(request, idPattern),
+        validateIdBasedRequest(request, idPattern),
         () ->
             new UpdateAuthorizationRequest(
                 authorizationKey,
                 request.getOwnerId(),
                 AuthorizationOwnerType.valueOf(request.getOwnerType().name()),
+                resolveIdBasedResourceMatcher(request.getResourceId()),
                 request.getResourceId(),
+                "",
                 AuthorizationResourceType.valueOf(request.getResourceType().name()),
                 transformPermissionTypes(request.getPermissionTypes())));
+  }
+
+  public static Either<ProblemDetail, UpdateAuthorizationRequest> toUpdateAuthorizationRequest(
+      final long authorizationKey,
+      final AuthorizationPropertyBasedRequest request,
+      final Pattern idPattern) {
+    return getResult(
+        validatePropertyBasedRequest(request, idPattern),
+        () ->
+            new UpdateAuthorizationRequest(
+                authorizationKey,
+                request.getOwnerId(),
+                AuthorizationOwnerType.valueOf(request.getOwnerType().name()),
+                AuthorizationResourceMatcher.PROPERTY,
+                "",
+                request.getResourcePropertyName(),
+                AuthorizationResourceType.valueOf(request.getResourceType().name()),
+                transformPermissionTypes(request.getPermissionTypes())));
+  }
+
+  private static AuthorizationResourceMatcher resolveIdBasedResourceMatcher(
+      final String resourceId) {
+    return AuthorizationScope.WILDCARD.getResourceId().equals(resourceId)
+        ? AuthorizationResourceMatcher.ANY
+        : AuthorizationResourceMatcher.ID;
+  }
+
+  private static ProblemDetail createUnsupportedAuthorizationProblemDetail(
+      final AuthorizationRequest request) {
+    return RestErrorMapper.createProblemDetail(
+        HttpStatus.BAD_REQUEST,
+        "Unsupported authorization request: " + request.getClass().getSimpleName(),
+        "Only authorization by id or property is supported.");
   }
 
   private static Set<PermissionType> transformPermissionTypes(
@@ -600,6 +702,40 @@ public class RequestMapper {
         () ->
             new MappingRuleDTO(
                 request.getClaimName(), request.getClaimValue(), request.getName(), mappingRuleId));
+  }
+
+  public static Either<ProblemDetail, ClusterVariableRequest> toGlobalClusterVariableCreateRequest(
+      final CreateClusterVariableRequest request, final Pattern identifierPattern) {
+    return getResult(
+        ClusterVariableRequestValidator.validateGlobalClusterVariableCreateRequest(
+            request, identifierPattern),
+        () -> new ClusterVariableRequest(request.getName(), request.getValue(), null));
+  }
+
+  public static Either<ProblemDetail, ClusterVariableRequest> toGlobalClusterVariableRequest(
+      final String name, final Pattern identifierPattern) {
+    return getResult(
+        ClusterVariableRequestValidator.validateGlobalClusterVariableRequest(
+            name, identifierPattern),
+        () -> new ClusterVariableRequest(name, null, null));
+  }
+
+  public static Either<ProblemDetail, ClusterVariableRequest> toTenantClusterVariableCreateRequest(
+      final CreateClusterVariableRequest request,
+      final String tenantId,
+      final Pattern identifierPattern) {
+    return getResult(
+        ClusterVariableRequestValidator.validateTenantClusterVariableCreateRequest(
+            request, tenantId, identifierPattern),
+        () -> new ClusterVariableRequest(request.getName(), request.getValue(), tenantId));
+  }
+
+  public static Either<ProblemDetail, ClusterVariableRequest> toTenantClusterVariableRequest(
+      final String name, final String tenantId, final Pattern identifierPattern) {
+    return getResult(
+        ClusterVariableRequestValidator.validateTenantClusterVariableRequest(
+            name, tenantId, identifierPattern),
+        () -> new ClusterVariableRequest(name, null, tenantId));
   }
 
   public static <BrokerResponseT> CompletableFuture<ResponseEntity<Object>> executeServiceMethod(
@@ -937,13 +1073,25 @@ public class RequestMapper {
                 processInstanceKey,
                 mapProcessInstanceModificationActivateInstruction(
                     request.getActivateInstructions()),
+                mapProcessInstanceModificationMoveInstruction(request.getMoveInstructions()),
                 request.getTerminateInstructions().stream()
                     .map(
-                        terminateInstruction ->
-                            new ProcessInstanceModificationTerminateInstruction()
-                                .setElementInstanceKey(
-                                    KeyUtil.keyToLong(
-                                        terminateInstruction.getElementInstanceKey())))
+                        instruction -> {
+                          final var mappedInstruction =
+                              new ProcessInstanceModificationTerminateInstruction();
+                          if (instruction
+                              instanceof
+                              final ProcessInstanceModificationTerminateByKeyInstruction byKey) {
+                            mappedInstruction.setElementInstanceKey(
+                                KeyUtil.keyToLong(byKey.getElementInstanceKey()));
+                          } else {
+                            mappedInstruction.setElementId(
+                                ((ProcessInstanceModificationTerminateByIdInstruction) instruction)
+                                    .getElementId());
+                          }
+
+                          return mappedInstruction;
+                        })
                     .toList(),
                 request.getOperationReference()));
   }
@@ -956,7 +1104,7 @@ public class RequestMapper {
         () ->
             new ProcessInstanceModifyBatchOperationRequest(
                 toRequiredProcessInstanceFilter(request.getFilter()).get(),
-                mapProcessInstanceModificationMoveInstruction(request.getMoveInstructions())));
+                mapProcessInstanceModificationMoveBatchInstruction(request.getMoveInstructions())));
   }
 
   public static Either<ProblemDetail, DecisionEvaluationRequest> toEvaluateDecisionRequest(
@@ -1071,17 +1219,18 @@ public class RequestMapper {
                   .setElementId(instruction.getElementId())
                   .setAncestorScopeKey(getAncestorKey(instruction.getAncestorElementInstanceKey()));
               instruction.getVariableInstructions().stream()
-                  .map(
-                      variable ->
-                          new ProcessInstanceModificationVariableInstruction()
-                              .setElementId(variable.getScopeId())
-                              .setVariables(
-                                  new UnsafeBuffer(
-                                      MsgPackConverter.convertToMsgPack(variable.getVariables()))))
+                  .map(RequestMapper::mapVariableInstruction)
                   .forEach(mappedInstruction::addVariableInstruction);
               return mappedInstruction;
             })
         .toList();
+  }
+
+  private static ProcessInstanceModificationVariableInstruction mapVariableInstruction(
+      final ModifyProcessInstanceVariableInstruction variable) {
+    return new ProcessInstanceModificationVariableInstruction()
+        .setElementId(variable.getScopeId())
+        .setVariables(new UnsafeBuffer(MsgPackConverter.convertToMsgPack(variable.getVariables())));
   }
 
   private static Long getAncestorKey(final String ancestorElementInstanceKey) {
@@ -1091,19 +1240,43 @@ public class RequestMapper {
     return KeyUtil.keyToLong(ancestorElementInstanceKey);
   }
 
-  private static List<BatchOperationProcessInstanceModificationMoveInstruction>
+  private static List<ProcessInstanceModificationMoveInstruction>
       mapProcessInstanceModificationMoveInstruction(
-          final List<ProcessInstanceModificationMoveBatchOperationInstruction> instructions) {
+          final List<
+                  io.camunda.zeebe.gateway.protocol.rest.ProcessInstanceModificationMoveInstruction>
+              instructions) {
     return instructions.stream()
         .map(
             instruction -> {
               final var mappedInstruction =
-                  new BatchOperationProcessInstanceModificationMoveInstruction();
-              mappedInstruction
-                  .setSourceElementId(instruction.getSourceElementId())
-                  .setTargetElementId(instruction.getTargetElementId());
+                  new ProcessInstanceModificationMoveInstruction()
+                      .setSourceElementId(instruction.getSourceElementId())
+                      .setTargetElementId(instruction.getTargetElementId());
+              switch (instruction.getAncestorScopeInstruction()) {
+                case null -> mappedInstruction.setAncestorScopeKey(-1);
+                case final DirectAncestorKeyInstruction direct ->
+                    mappedInstruction.setAncestorScopeKey(
+                        getAncestorKey(direct.getAncestorElementInstanceKey()));
+                default -> mappedInstruction.setUseSourceParentKeyAsAncestorScope(true);
+              }
+              instruction.getVariableInstructions().stream()
+                  .map(RequestMapper::mapVariableInstruction)
+                  .forEach(mappedInstruction::addVariableInstruction);
               return mappedInstruction;
             })
+        .toList();
+  }
+
+  private static List<ProcessInstanceModificationMoveInstruction>
+      mapProcessInstanceModificationMoveBatchInstruction(
+          final List<ProcessInstanceModificationMoveBatchOperationInstruction> instructions) {
+    return instructions.stream()
+        .map(
+            instruction ->
+                new ProcessInstanceModificationMoveInstruction()
+                    .setSourceElementId(instruction.getSourceElementId())
+                    .setTargetElementId(instruction.getTargetElementId())
+                    .setUseSourceParentKeyAsAncestorScope(true))
         .toList();
   }
 

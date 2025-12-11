@@ -44,6 +44,10 @@ public final class SortOptionBuilders {
     return new VariableSort.Builder();
   }
 
+  public static ClusterVariableSort.Builder clusterVariable() {
+    return new ClusterVariableSort.Builder();
+  }
+
   public static DecisionDefinitionSort.Builder decisionDefinition() {
     return new DecisionDefinitionSort.Builder();
   }
@@ -114,6 +118,11 @@ public final class SortOptionBuilders {
   public static VariableSort variable(
       final Function<VariableSort.Builder, ObjectBuilder<VariableSort>> fn) {
     return fn.apply(variable()).build();
+  }
+
+  public static ClusterVariableSort clusterVariable(
+      final Function<ClusterVariableSort.Builder, ObjectBuilder<ClusterVariableSort>> fn) {
+    return fn.apply(clusterVariable()).build();
   }
 
   public static DecisionDefinitionSort decisionDefinition(
@@ -209,6 +218,15 @@ public final class SortOptionBuilders {
     return fn.apply(authorization()).build();
   }
 
+  public static AuditLogSort.Builder auditLog() {
+    return new AuditLogSort.Builder();
+  }
+
+  public static AuditLogSort auditLog(
+      final Function<AuditLogSort.Builder, ObjectBuilder<AuditLogSort>> fn) {
+    return fn.apply(auditLog()).build();
+  }
+
   public static JobSort.Builder job() {
     return new JobSort.Builder();
   }
@@ -224,6 +242,20 @@ public final class SortOptionBuilders {
   public static MessageSubscriptionSort messageSubscription(
       final Function<MessageSubscriptionSort.Builder, ObjectBuilder<MessageSubscriptionSort>> fn) {
     return fn.apply(messageSubscription()).build();
+  }
+
+  public static ProcessDefinitionMessageSubscriptionStatisticsSort.Builder
+      processDefinitionMessageSubscriptionStatistics() {
+    return new ProcessDefinitionMessageSubscriptionStatisticsSort.Builder();
+  }
+
+  public static ProcessDefinitionMessageSubscriptionStatisticsSort
+      processDefinitionMessageSubscriptionStatistics(
+          final Function<
+                  ProcessDefinitionMessageSubscriptionStatisticsSort.Builder,
+                  ObjectBuilder<ProcessDefinitionMessageSubscriptionStatisticsSort>>
+              fn) {
+    return fn.apply(processDefinitionMessageSubscriptionStatistics()).build();
   }
 
   public static CorrelatedMessageSubscriptionSort.Builder correlatedMessageSubscription() {

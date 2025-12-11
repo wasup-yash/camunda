@@ -19,7 +19,10 @@ import io.camunda.configuration.beans.SearchEngineConnectProperties;
 import io.camunda.configuration.beans.SearchEngineIndexProperties;
 import io.camunda.exporter.config.ExporterConfiguration;
 import io.camunda.operate.conditions.DatabaseType;
+import io.camunda.operate.property.OperateElasticsearchProperties;
 import io.camunda.operate.property.OperateProperties;
+import io.camunda.search.connect.configuration.ConnectConfiguration;
+import io.camunda.tasklist.property.TasklistElasticsearchProperties;
 import io.camunda.tasklist.property.TasklistProperties;
 import io.camunda.zeebe.broker.system.configuration.ExporterCfg;
 import java.util.Map;
@@ -78,6 +81,7 @@ public class SecondaryStorageElasticsearchTest {
 
   private static final int EXPECTED_BATCH_OPERATION_CACHE_MAX_SIZE = 5_000;
   private static final int EXPECTED_PROCESS_CACHE_MAX_SIZE = 15_000;
+  private static final int EXPECTED_DECISIONREQUIREMENTS_CACHE_MAX_SIZE = 8_000;
   private static final int EXPECTED_FORM_CACHE_MAX_SIZE = 20_000;
 
   private static final int EXPECTED_POST_EXPORT_BATCH_SIZE = 200;
@@ -90,6 +94,10 @@ public class SecondaryStorageElasticsearchTest {
   private static final int EXPECTED_BULK_DELAY = 10;
   private static final int EXPECTED_BULK_SIZE = 2_000;
   private static final int EXPECTED_BULK_MEMORY_LIMIT = 50;
+
+  private static final String EXPECTED_BACKUP_REPOSITORY_NAME = "backup-repo";
+  private static final int EXPECTED_BACKUP_SNAPSHOT_TIMEOUT = 10;
+  private static final int EXPECTED_BACKUP_INCOMPLETE_CHECK_TIMEOUT = 10;
 
   @Nested
   @TestPropertySource(
@@ -115,9 +123,12 @@ public class SecondaryStorageElasticsearchTest {
         "camunda.data.secondary-storage.elasticsearch.history.process-instance-enabled="
             + EXPECTED_HISTORY_PROCESS_INSTANCE_ENABLED,
         "camunda.data.secondary-storage.elasticsearch.date-format=" + EXPECTED_DATE_FORMAT,
-        "camunda.data.secondary-storage.elasticsearch.socket-timeout=" + EXPECTED_SOCKET_TIMEOUT,
+        "camunda.data.secondary-storage.elasticsearch.socket-timeout="
+            + EXPECTED_SOCKET_TIMEOUT
+            + "ms",
         "camunda.data.secondary-storage.elasticsearch.connection-timeout="
-            + EXPECTED_CONNECTION_TIMEOUT,
+            + EXPECTED_CONNECTION_TIMEOUT
+            + "ms",
         "camunda.data.secondary-storage.elasticsearch.history.els-rollover-date-format="
             + EXPECTED_HISTORY_ELS_ROLLOVER_DATE_FORMAT,
         "camunda.data.secondary-storage.elasticsearch.history.rollover-interval="
@@ -155,7 +166,12 @@ public class SecondaryStorageElasticsearchTest {
             + EXPECTED_BATCH_OPERATION_EXPORT_ITEMS_ON_CREATION,
         "camunda.data.secondary-storage.elasticsearch.bulk.delay=10s",
         "camunda.data.secondary-storage.elasticsearch.bulk.size=" + EXPECTED_BULK_SIZE,
-        "camunda.data.secondary-storage.elasticsearch.bulk.memory-limit=50MB"
+        "camunda.data.secondary-storage.elasticsearch.bulk.memory-limit=50MB",
+        "camunda.data.secondary-storage.elasticsearch.backup.repository-name="
+            + EXPECTED_BACKUP_REPOSITORY_NAME,
+        "camunda.data.secondary-storage.elasticsearch.backup.snapshot-timeout="
+            + EXPECTED_BACKUP_SNAPSHOT_TIMEOUT,
+        "camunda.data.secondary-storage.elasticsearch.backup.incomplete-check-timeout=PT10S",
       })
   class WithOnlyUnifiedConfigSet {
     final OperateProperties operateProperties;
@@ -197,6 +213,12 @@ public class SecondaryStorageElasticsearchTest {
           .isEqualTo(EXPECTED_SOCKET_TIMEOUT);
       assertThat(operateProperties.getElasticsearch().getConnectTimeout())
           .isEqualTo(EXPECTED_CONNECTION_TIMEOUT);
+      assertThat(operateProperties.getBackup().getSnapshotTimeout())
+          .isEqualTo(EXPECTED_BACKUP_SNAPSHOT_TIMEOUT);
+      assertThat(operateProperties.getBackup().getRepositoryName())
+          .isEqualTo(EXPECTED_BACKUP_REPOSITORY_NAME);
+      assertThat(operateProperties.getBackup().getIncompleteCheckTimeoutInSeconds())
+          .isEqualTo(EXPECTED_BACKUP_INCOMPLETE_CHECK_TIMEOUT);
     }
 
     @Test
@@ -219,6 +241,8 @@ public class SecondaryStorageElasticsearchTest {
           .isEqualTo(EXPECTED_SOCKET_TIMEOUT);
       assertThat(tasklistProperties.getElasticsearch().getConnectTimeout())
           .isEqualTo(EXPECTED_CONNECTION_TIMEOUT);
+      assertThat(tasklistProperties.getBackup().getRepositoryName())
+          .isEqualTo(EXPECTED_BACKUP_REPOSITORY_NAME);
     }
 
     @Test
@@ -431,13 +455,16 @@ public class SecondaryStorageElasticsearchTest {
         "camunda.tasklist.elasticsearch.dateFormat=" + EXPECTED_DATE_FORMAT,
         "camunda.operate.elasticsearch.dateFormat=" + EXPECTED_DATE_FORMAT,
         // socket timeout
-        "camunda.data.secondary-storage.elasticsearch.socket-timeout=" + EXPECTED_SOCKET_TIMEOUT,
+        "camunda.data.secondary-storage.elasticsearch.socket-timeout="
+            + EXPECTED_SOCKET_TIMEOUT
+            + "ms",
         "camunda.data.socketTimeout=" + EXPECTED_SOCKET_TIMEOUT,
         "camunda.tasklist.elasticsearch.socketTimeout=" + EXPECTED_SOCKET_TIMEOUT,
         "camunda.operate.elasticsearch.socketTimeout=" + EXPECTED_SOCKET_TIMEOUT,
         // connection timeout
         "camunda.data.secondary-storage.elasticsearch.connection-timeout="
-            + EXPECTED_CONNECTION_TIMEOUT,
+            + EXPECTED_CONNECTION_TIMEOUT
+            + "ms",
         "camunda.data.connectTimeout=" + EXPECTED_CONNECTION_TIMEOUT,
         "camunda.tasklist.elasticsearch.connectTimeout=" + EXPECTED_CONNECTION_TIMEOUT,
         "camunda.operate.elasticsearch.connectTimeout=" + EXPECTED_CONNECTION_TIMEOUT,
@@ -482,6 +509,16 @@ public class SecondaryStorageElasticsearchTest {
         "camunda.database.index.replicasByIndexName.my-index=3",
         "camunda.data.secondary-storage.elasticsearch.number-of-shards-per-index.my-index=2",
         "camunda.database.index.shardsByIndexName.my-index=2",
+
+        // backup configuration
+        "camunda.data.secondary-storage.elasticsearch.backup.repository-name="
+            + EXPECTED_BACKUP_REPOSITORY_NAME,
+        "camunda.data.secondary-storage.elasticsearch.backup.snapshot-timeout="
+            + EXPECTED_BACKUP_SNAPSHOT_TIMEOUT,
+        "camunda.data.secondary-storage.elasticsearch.backup.incomplete-check-timeout=10s",
+        "camunda.operate.backup.repositoryName=" + EXPECTED_BACKUP_REPOSITORY_NAME,
+        "camunda.operate.backup.snapshotTimeout=" + EXPECTED_BACKUP_SNAPSHOT_TIMEOUT,
+        "camunda.operate.backup.incompleteCheckTimeoutInSeconds=10",
       })
   class WithNewAndLegacySet {
     final OperateProperties operateProperties;
@@ -523,6 +560,12 @@ public class SecondaryStorageElasticsearchTest {
           .isEqualTo(EXPECTED_SOCKET_TIMEOUT);
       assertThat(operateProperties.getElasticsearch().getConnectTimeout())
           .isEqualTo(EXPECTED_CONNECTION_TIMEOUT);
+      assertThat(operateProperties.getBackup().getSnapshotTimeout())
+          .isEqualTo(EXPECTED_BACKUP_SNAPSHOT_TIMEOUT);
+      assertThat(operateProperties.getBackup().getRepositoryName())
+          .isEqualTo(EXPECTED_BACKUP_REPOSITORY_NAME);
+      assertThat(operateProperties.getBackup().getIncompleteCheckTimeoutInSeconds())
+          .isEqualTo(EXPECTED_BACKUP_INCOMPLETE_CHECK_TIMEOUT);
     }
 
     @Test
@@ -545,6 +588,8 @@ public class SecondaryStorageElasticsearchTest {
           .isEqualTo(EXPECTED_SOCKET_TIMEOUT);
       assertThat(tasklistProperties.getElasticsearch().getConnectTimeout())
           .isEqualTo(EXPECTED_CONNECTION_TIMEOUT);
+      assertThat(tasklistProperties.getBackup().getRepositoryName())
+          .isEqualTo(EXPECTED_BACKUP_REPOSITORY_NAME);
     }
 
     @Test
@@ -717,6 +762,8 @@ public class SecondaryStorageElasticsearchTest {
             + EXPECTED_BATCH_OPERATION_CACHE_MAX_SIZE,
         "camunda.data.secondary-storage.elasticsearch.process-cache.max-size="
             + EXPECTED_PROCESS_CACHE_MAX_SIZE,
+        "camunda.data.secondary-storage.elasticsearch.decisionRequirements-cache.max-size="
+            + EXPECTED_DECISIONREQUIREMENTS_CACHE_MAX_SIZE,
         "camunda.data.secondary-storage.elasticsearch.form-cache.max-size="
             + EXPECTED_FORM_CACHE_MAX_SIZE,
       })
@@ -740,8 +787,65 @@ public class SecondaryStorageElasticsearchTest {
           .isEqualTo(EXPECTED_BATCH_OPERATION_CACHE_MAX_SIZE);
       assertThat(exporterConfiguration.getProcessCache().getMaxCacheSize())
           .isEqualTo(EXPECTED_PROCESS_CACHE_MAX_SIZE);
+      assertThat(exporterConfiguration.getDecisionRequirementsCache().getMaxCacheSize())
+          .isEqualTo(EXPECTED_DECISIONREQUIREMENTS_CACHE_MAX_SIZE);
       assertThat(exporterConfiguration.getFormCache().getMaxCacheSize())
           .isEqualTo(EXPECTED_FORM_CACHE_MAX_SIZE);
+    }
+  }
+
+  @Nested
+  class WithoutNewAndLegacySet {
+    final OperateProperties operateProperties;
+    final TasklistProperties tasklistProperties;
+    final BrokerBasedProperties brokerBasedProperties;
+    final SearchEngineConnectProperties searchEngineConnectProperties;
+
+    WithoutNewAndLegacySet(
+        @Autowired final OperateProperties operateProperties,
+        @Autowired final TasklistProperties tasklistProperties,
+        @Autowired final BrokerBasedProperties brokerBasedProperties,
+        @Autowired final SearchEngineConnectProperties searchEngineConnectProperties) {
+      this.operateProperties = operateProperties;
+      this.tasklistProperties = tasklistProperties;
+      this.brokerBasedProperties = brokerBasedProperties;
+      this.searchEngineConnectProperties = searchEngineConnectProperties;
+    }
+
+    @Test
+    void shouldUseOperatePropertiesDefaults() {
+      assertThat(operateProperties.getElasticsearch())
+          .returns(null, OperateElasticsearchProperties::getSocketTimeout)
+          .returns(null, OperateElasticsearchProperties::getConnectTimeout);
+    }
+
+    @Test
+    void shouldUseTasklistPropertiesDefaults() {
+      assertThat(tasklistProperties.getElasticsearch())
+          .returns(null, TasklistElasticsearchProperties::getSocketTimeout)
+          .returns(null, TasklistElasticsearchProperties::getConnectTimeout);
+    }
+
+    @Test
+    void shouldUseCamundaExporterPropertiesDefaults() {
+      final ExporterCfg camundaExporter = brokerBasedProperties.getCamundaExporter();
+      assertThat(camundaExporter).isNotNull();
+      final Map<String, Object> args = camundaExporter.getArgs();
+      assertThat(args).isNotNull();
+
+      final ExporterConfiguration exporterConfiguration =
+          UnifiedConfigurationHelper.argsToCamundaExporterConfiguration(args);
+
+      assertThat(exporterConfiguration.getConnect())
+          .returns(null, ConnectConfiguration::getSocketTimeout)
+          .returns(null, ConnectConfiguration::getConnectTimeout);
+    }
+
+    @Test
+    void shouldUseSearchEngineConnectPropertiesDefaults() {
+      assertThat(searchEngineConnectProperties)
+          .returns(null, SearchEngineConnectProperties::getSocketTimeout)
+          .returns(null, SearchEngineConnectProperties::getConnectTimeout);
     }
   }
 }

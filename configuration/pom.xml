@@ -93,6 +93,11 @@
     </dependency>
 
     <dependency>
+      <groupId>io.camunda</groupId>
+      <artifactId>zeebe-workflow-engine</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
@@ -140,6 +145,12 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
+      <artifactId>zeebe-backup</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
       <artifactId>camunda-exporter</artifactId>
     </dependency>
 
@@ -157,6 +168,7 @@
       <groupId>io.camunda</groupId>
       <artifactId>camunda-schema-manager</artifactId>
     </dependency>
+
   </dependencies>
 
   <build>

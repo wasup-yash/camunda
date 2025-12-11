@@ -83,14 +83,12 @@ const MetadataPopover = observer(({selectedFlowNodeRef}: Props) => {
   const {
     data: elementInstancesSearchResult,
     isLoading: isSearchingElementInstances,
-  } = useElementInstancesSearch(
-    elementId ?? '',
-    processInstance?.processInstanceKey ?? '',
-    convertBpmnJsTypeToAPIType(businessObject?.$type),
-    {
-      enabled: shouldFetchElementInstances,
-    },
-  );
+  } = useElementInstancesSearch({
+    elementId: elementId ?? '',
+    processInstanceKey: processInstance?.processInstanceKey ?? '',
+    elementType: convertBpmnJsTypeToAPIType(businessObject?.$type),
+    enabled: shouldFetchElementInstances,
+  });
 
   const elementInstanceMetadata = useMemo(() => {
     if (elementInstanceKey && elementInstance) {
@@ -167,7 +165,7 @@ const MetadataPopover = observer(({selectedFlowNodeRef}: Props) => {
             <MultiIncidents
               count={incidentCount}
               onButtonClick={() => {
-                incidentsPanelStore.setPanelOpen(true);
+                incidentsPanelStore.showIncidentsForElementId(elementId);
               }}
             />
           </>

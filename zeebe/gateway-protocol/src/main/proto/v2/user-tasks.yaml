@@ -289,7 +289,7 @@ paths:
         - User task
       operationId: searchUserTaskVariables
       summary: Search user task variables
-      description: Search for user task variables based on given criteria.
+      description: Search for user task variables based on given criteria. By default, long variable values in the response are truncated.
       parameters:
         - name: userTaskKey
           in: path
@@ -297,6 +297,12 @@ paths:
           description: The key of the user task.
           schema:
             $ref: 'keys.yaml#/components/schemas/UserTaskKey'
+        - name: truncateValues
+          in: query
+          required: false
+          description: When true (default), long variable values in the response are truncated. When false, full variable values are returned.
+          schema:
+            type: boolean
       requestBody:
         required: false
         content:
@@ -333,7 +339,7 @@ components:
             - priority
             - name
         order:
-          $ref: 'enums.yaml#/components/schemas/SortOrderEnum'
+          $ref: 'search-models.yaml#/components/schemas/SortOrderEnum'
       required:
         - field
 
@@ -435,6 +441,8 @@ components:
           allOf:
             - $ref: 'keys.yaml#/components/schemas/ElementInstanceKey'
           description: The key of the element instance.
+        tags:
+          $ref: 'identifiers.yaml#/components/schemas/TagSet'
 
     UserTaskSearchQueryResult:
       description: User task search query response.
@@ -536,6 +544,8 @@ components:
           allOf:
             - $ref: 'keys.yaml#/components/schemas/FormKey'
           description: The key of the form.
+        tags:
+          $ref: 'identifiers.yaml#/components/schemas/TagSet'
 
     UserTaskCompletionRequest:
       type: object
@@ -656,7 +666,7 @@ components:
             - scopeKey
             - processInstanceKey
         order:
-          $ref: 'enums.yaml#/components/schemas/SortOrderEnum'
+          $ref: 'search-models.yaml#/components/schemas/SortOrderEnum'
       required:
         - field
 

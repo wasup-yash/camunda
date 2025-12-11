@@ -17,7 +17,8 @@ import {
   mockDecisionXml,
   mockResponses as mockDecisionsResponses,
   mockDeleteDecision,
-  mockGroupedDecisions,
+  mockEmptyDecisionInstances,
+  mockedDecisionDefinitions,
 } from '../mocks/decisions.mocks';
 import {openFile} from '@/utils/openFile';
 import {expect} from '@playwright/test';
@@ -122,9 +123,9 @@ test.describe.skip('delete resource definitions', () => {
     await page.route(
       URL_API_PATTERN,
       mockDecisionsResponses({
-        groupedDecisions: mockGroupedDecisions,
+        decisionDefinitions: mockedDecisionDefinitions,
         batchOperations: {items: [], page: {totalItems: 0}},
-        decisionInstances: {totalCount: 0, decisionInstances: []},
+        decisionInstances: mockEmptyDecisionInstances,
         decisionXml: mockDecisionXml,
         deleteDecision: mockDeleteDecision,
       }),

@@ -23,6 +23,8 @@ public record SearchClientReaders(
     JobReader jobReader,
     MappingRuleReader mappingRuleReader,
     MessageSubscriptionReader messageSubscriptionReader,
+    ProcessDefinitionMessageSubscriptionStatisticsReader
+        processDefinitionMessageSubscriptionStatisticsReader,
     ProcessDefinitionReader processDefinitionReader,
     ProcessDefinitionStatisticsReader processDefinitionStatisticsReader,
     ProcessInstanceReader processInstanceReader,
@@ -39,4 +41,6 @@ public record SearchClientReaders(
     UsageMetricsTUReader usageMetricsTUReader,
     UserReader userReader,
     UserTaskReader userTaskReader,
-    VariableReader variableReader) {}
+    VariableReader variableReader,
+    ClusterVariableReader clusterVariableReader,
+    AuditLogReader auditLogReader) {}

@@ -11,8 +11,8 @@ import io.camunda.security.auth.Authorization;
 import io.camunda.zeebe.engine.metrics.BatchOperationMetrics;
 import io.camunda.zeebe.engine.processing.Rejection;
 import io.camunda.zeebe.engine.processing.distribution.CommandDistributionBehavior;
-import io.camunda.zeebe.engine.processing.identity.AuthorizationCheckBehavior;
-import io.camunda.zeebe.engine.processing.identity.AuthorizationCheckBehavior.AuthorizationRequest;
+import io.camunda.zeebe.engine.processing.identity.authorization.AuthorizationCheckBehavior;
+import io.camunda.zeebe.engine.processing.identity.authorization.request.AuthorizationRequest;
 import io.camunda.zeebe.engine.processing.streamprocessor.DistributedTypedRecordProcessor;
 import io.camunda.zeebe.engine.processing.streamprocessor.FollowUpEventMetadata;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.StateWriter;
@@ -69,7 +69,7 @@ public final class BatchOperationCreateProcessor
       final RoutingInfo routingInfo,
       final BatchOperationMetrics metrics) {
     stateWriter = writers.state();
-    this.batchOperationState = state.getBatchOperationState();
+    batchOperationState = state.getBatchOperationState();
     rejectionWriter = writers.rejection();
     responseWriter = writers.response();
     this.keyGenerator = keyGenerator;
@@ -159,14 +159,21 @@ public final class BatchOperationCreateProcessor
           MsgPackConverter.convertToObject(
               command.getValue().getAuthorizationCheckBuffer(), Authorization.class);
       final AuthorizationRequest authorizationRequest =
-          new AuthorizationRequest(
-              command, authorization.resourceType(), authorization.permissionType());
-      authorization.resourceIds().forEach(authorizationRequest::addResourceId);
-      return authCheckBehavior.isAuthorized(authorizationRequest.build());
+          AuthorizationRequest.builder()
+              .command(command)
+              .resourceType(authorization.resourceType())
+              .permissionType(authorization.permissionType())
+              .addAllResourceIds(authorization.resourceIds())
+              .build();
+      return authCheckBehavior.isAuthorized(authorizationRequest);
     }
     // first check for general CREATE_BATCH_OPERATION permission
     final var request =
-        new AuthorizationRequest(command, AuthorizationResourceType.BATCH, PermissionType.CREATE);
+        AuthorizationRequest.builder()
+            .command(command)
+            .resourceType(AuthorizationResourceType.BATCH)
+            .permissionType(PermissionType.CREATE)
+            .build();
     final var isAuthorized = authCheckBehavior.isAuthorizedOrInternalCommand(request);
     if (isAuthorized.isLeft()) {
       // if that's not present, check for the BO type dependent permission
@@ -179,9 +186,15 @@ public final class BatchOperationCreateProcessor
             case MODIFY_PROCESS_INSTANCE ->
                 PermissionType.CREATE_BATCH_OPERATION_MODIFY_PROCESS_INSTANCE;
             case RESOLVE_INCIDENT -> PermissionType.CREATE_BATCH_OPERATION_RESOLVE_INCIDENT;
+            case DELETE_PROCESS_INSTANCE ->
+                PermissionType.CREATE_BATCH_OPERATION_DELETE_PROCESS_INSTANCE;
           };
       return authCheckBehavior.isAuthorized(
-          new AuthorizationRequest(command, AuthorizationResourceType.BATCH, permission).build());
+          AuthorizationRequest.builder()
+              .command(command)
+              .resourceType(AuthorizationResourceType.BATCH)
+              .permissionType(permission)
+              .build());
     }
 
     return isAuthorized;

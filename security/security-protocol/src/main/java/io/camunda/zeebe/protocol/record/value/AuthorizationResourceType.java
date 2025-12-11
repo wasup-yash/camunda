@@ -28,6 +28,7 @@ public enum AuthorizationResourceType {
       PermissionType.READ,
       PermissionType.UPDATE),
   COMPONENT(PermissionType.ACCESS),
+  CLUSTER_VARIABLE(PermissionType.CREATE, PermissionType.DELETE, PermissionType.READ),
   DECISION_DEFINITION(
       PermissionType.CREATE_DECISION_INSTANCE,
       PermissionType.READ_DECISION_DEFINITION,
@@ -62,7 +63,8 @@ public enum AuthorizationResourceType {
   UNSPECIFIED(),
   USER(PermissionType.CREATE, PermissionType.READ, PermissionType.UPDATE, PermissionType.DELETE),
   USER_TASK(
-      PermissionType.READ, PermissionType.UPDATE, PermissionType.CLAIM, PermissionType.COMPLETE);
+      PermissionType.READ, PermissionType.UPDATE, PermissionType.CLAIM, PermissionType.COMPLETE),
+  AUDIT_LOG(PermissionType.READ, PermissionType.READ_OPERATOR_AUDIT_LOG);
 
   private final Set<PermissionType> supportedPermissionTypes;
 

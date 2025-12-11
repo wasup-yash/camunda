@@ -12,6 +12,7 @@ import io.camunda.security.auth.BrokerRequestAuthorizationConverter;
 import io.camunda.zeebe.engine.EngineConfiguration;
 import io.camunda.zeebe.engine.metrics.BatchOperationMetrics;
 import io.camunda.zeebe.engine.processing.batchoperation.handlers.CancelProcessInstanceBatchOperationExecutor;
+import io.camunda.zeebe.engine.processing.batchoperation.handlers.DeleteProcessInstanceBatchOperationExecutor;
 import io.camunda.zeebe.engine.processing.batchoperation.handlers.MigrateProcessInstanceBatchOperationExecutor;
 import io.camunda.zeebe.engine.processing.batchoperation.handlers.ModifyProcessInstanceBatchOperationExecutor;
 import io.camunda.zeebe.engine.processing.batchoperation.handlers.ResolveIncidentBatchOperationExecutor;
@@ -22,7 +23,7 @@ import io.camunda.zeebe.engine.processing.batchoperation.scheduler.BatchOperatio
 import io.camunda.zeebe.engine.processing.batchoperation.scheduler.BatchOperationPageProcessor;
 import io.camunda.zeebe.engine.processing.batchoperation.scheduler.BatchOperationRetryHandler;
 import io.camunda.zeebe.engine.processing.distribution.CommandDistributionBehavior;
-import io.camunda.zeebe.engine.processing.identity.AuthorizationCheckBehavior;
+import io.camunda.zeebe.engine.processing.identity.authorization.AuthorizationCheckBehavior;
 import io.camunda.zeebe.engine.processing.streamprocessor.TypedRecordProcessors;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.Writers;
 import io.camunda.zeebe.engine.state.immutable.ProcessingState;
@@ -70,9 +71,10 @@ public final class BatchOperationSetupProcessors {
                 brokerRequestAuthorizationConverter),
             BatchOperationType.MODIFY_PROCESS_INSTANCE,
             new ModifyProcessInstanceBatchOperationExecutor(
-                writers.command(),
-                processingState.getElementInstanceState(),
-                brokerRequestAuthorizationConverter));
+                writers.command(), brokerRequestAuthorizationConverter),
+            BatchOperationType.DELETE_PROCESS_INSTANCE,
+            new DeleteProcessInstanceBatchOperationExecutor(
+                writers.command(), brokerRequestAuthorizationConverter));
 
     final var batchOperationInitializer =
         new BatchOperationInitializer(

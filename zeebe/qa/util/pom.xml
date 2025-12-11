@@ -126,7 +126,7 @@
 
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>toxiproxy</artifactId>
+      <artifactId>testcontainers-toxiproxy</artifactId>
     </dependency>
 
     <dependency>
@@ -157,11 +157,6 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>zeebe-atomix-cluster</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>zeebe-gateway</artifactId>
     </dependency>
 
     <dependency>

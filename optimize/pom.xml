@@ -45,11 +45,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <project.previousVersion>8.8.0</project.previousVersion>
-    <camunda.maven.artifacts.version>7.22.0</camunda.maven.artifacts.version>
 
-    <zeebe.version>8.8.3</zeebe.version>
-    <!-- We use this version to compile but run IT against containers with zeebe.docker.version -->
-    <identity.version>8.8.1</identity.version>
+    <zeebe.version>${project.version}</zeebe.version>
     <!-- We use this for the Zeebe test container version only -->
     <zeebe.docker.version>8.7.0-alpha4</zeebe.docker.version>
 
@@ -273,7 +270,6 @@
               <dep>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</dep>
               <dep>commons-collections:commons-collections</dep>
               <dep>org.apache.httpcomponents:httpcore-nio</dep>
-              <dep>org.apache.tika:tika-core</dep>
               <dep>org.opensearch.client:opensearch-java</dep>
               <dep>org.opensearch.client:opensearch-rest-client</dep>
               <dep>com.nimbusds:nimbus-jose-jwt</dep>

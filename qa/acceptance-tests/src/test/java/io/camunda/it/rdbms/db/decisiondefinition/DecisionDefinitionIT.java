@@ -22,6 +22,7 @@ import io.camunda.search.filter.DecisionDefinitionFilter;
 import io.camunda.search.page.SearchQueryPage;
 import io.camunda.search.query.DecisionDefinitionQuery;
 import io.camunda.search.sort.DecisionDefinitionSort;
+import io.camunda.zeebe.protocol.record.value.AuthorizationResourceType;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
@@ -57,6 +58,10 @@ public class DecisionDefinitionIT {
         .isEqualTo(decisionDefinition.decisionRequirementsId());
     assertThat(instance.decisionRequirementsKey())
         .isEqualTo(decisionDefinition.decisionRequirementsKey());
+    assertThat(instance.decisionRequirementsName())
+        .isEqualTo(decisionDefinition.decisionRequirementsName());
+    assertThat(instance.decisionRequirementsVersion())
+        .isEqualTo(decisionDefinition.decisionRequirementsVersion());
   }
 
   @TestTemplate
@@ -96,6 +101,10 @@ public class DecisionDefinitionIT {
         .isEqualTo(decisionDefinition.decisionRequirementsId());
     assertThat(instance.decisionRequirementsKey())
         .isEqualTo(decisionDefinition.decisionRequirementsKey());
+    assertThat(instance.decisionRequirementsName())
+        .isEqualTo(decisionDefinition.decisionRequirementsName());
+    assertThat(instance.decisionRequirementsVersion())
+        .isEqualTo(decisionDefinition.decisionRequirementsVersion());
   }
 
   @TestTemplate
@@ -113,6 +122,7 @@ public class DecisionDefinitionIT {
         decisionDefinitionReader.search(
             DecisionDefinitionQuery.of(b -> b),
             CommonFixtures.resourceAccessChecksFromResourceIds(
+                AuthorizationResourceType.DECISION_DEFINITION,
                 decisionDefinition.decisionDefinitionId()));
 
     assertThat(searchResult).isNotNull();
@@ -217,6 +227,8 @@ public class DecisionDefinitionIT {
                     .tenantIds(decisionDefinition.tenantId())
                     .decisionRequirementsIds(decisionDefinition.decisionRequirementsId())
                     .decisionRequirementsKeys(decisionDefinition.decisionRequirementsKey())
+                    .decisionRequirementsNames(decisionDefinition.decisionRequirementsName())
+                    .decisionRequirementsVersions(decisionDefinition.decisionRequirementsVersion())
                     .build(),
                 DecisionDefinitionSort.of(b -> b),
                 SearchQueryPage.of(b -> b.from(0).size(5))));

@@ -8,9 +8,11 @@
 package io.camunda.it.util;
 
 import static io.camunda.qa.util.multidb.CamundaMultiDBExtension.TIMEOUT_DATA_AVAILABILITY;
+import static java.lang.String.CASE_INSENSITIVE_ORDER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.ibm.icu.text.Collator;
 import io.camunda.client.CamundaClient;
 import io.camunda.client.api.command.CreateProcessInstanceCommandStep1;
 import io.camunda.client.api.command.ProblemException;
@@ -35,6 +37,7 @@ import io.camunda.client.api.search.response.GroupUser;
 import io.camunda.client.api.search.response.ProcessInstance;
 import io.camunda.client.api.search.response.RoleUser;
 import io.camunda.client.api.search.response.SearchResponse;
+import io.camunda.client.api.search.response.Tenant;
 import io.camunda.client.impl.search.filter.DecisionDefinitionFilterImpl;
 import io.camunda.client.impl.search.filter.DecisionRequirementsFilterImpl;
 import io.camunda.zeebe.model.bpmn.Bpmn;
@@ -43,11 +46,13 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.awaitility.Awaitility;
 
 /**
@@ -166,12 +171,27 @@ public final class TestHelper {
     }
   }
 
+  public static void deleteTenant(final CamundaClient camundaClient, final String tenant) {
+    camundaClient.newDeleteTenantCommand(tenant).send().join();
+  }
+
   public static ProcessInstanceEvent startProcessInstance(
       final CamundaClient camundaClient, final String bpmnProcessId) {
     return camundaClient
         .newCreateInstanceCommand()
         .bpmnProcessId(bpmnProcessId)
         .latestVersion()
+        .send()
+        .join();
+  }
+
+  public static ProcessInstanceEvent startProcessInstanceForTenant(
+      final CamundaClient camundaClient, final String bpmnProcessId, final String tenant) {
+    return camundaClient
+        .newCreateInstanceCommand()
+        .bpmnProcessId(bpmnProcessId)
+        .latestVersion()
+        .tenantId(tenant)
         .send()
         .join();
   }
@@ -592,6 +612,20 @@ public final class TestHelper {
                             .join()
                             .items())
                     .hasSize(expectedProcessInstances));
+  }
+
+  public static void waitForTenantDeletion(
+      final CamundaClient camundaClient, final String tenantToBeDeleted) {
+    Awaitility.await("should wait until tenant is deleted")
+        .atMost(TIMEOUT_DATA_AVAILABILITY)
+        .ignoreExceptions() // Ignore exceptions and continue retrying
+        .untilAsserted(
+            () ->
+                assertThat(
+                        camundaClient.newTenantsSearchRequest().send().join().items().stream()
+                            .map(Tenant::getTenantId)
+                            .collect(Collectors.toSet()))
+                    .doesNotContain(tenantToBeDeleted));
   }
 
   public static void waitForProcessesToBeDeployed(
@@ -1055,6 +1089,40 @@ public final class TestHelper {
     assertThatIsDescSorted(resultDesc.items(), propertyExtractor);
   }
 
+  /**
+   * Asserts that the given search responses are sorted either in a case-insensitive way or in a
+   * Java natural order way. This flexibility is needed because different databases might sort
+   * strings differently. To not make the assertion depend on a specific database behavior, we allow
+   * both sorting methods.
+   */
+  public static <T> void assertSortedFlexible(
+      final SearchResponse<T> resultAsc,
+      final SearchResponse<T> resultDesc,
+      final Function<T, String> propertyExtractor) {
+
+    // The AWS Aurora instances we test against use a collation based on Thai locale.
+    final var locale = Locale.of("th");
+    final Collator collator = Collator.getInstance(locale);
+    collator.setStrength(Collator.SECONDARY); // case-insensitive, accent-sensitive
+    final Comparator<String> stringComparator = collator::compare;
+
+    assertThat(resultAsc)
+        .satisfiesAnyOf(
+            result ->
+                assertThatIsSortedBy(result.items(), propertyExtractor, CASE_INSENSITIVE_ORDER),
+            result -> assertThatIsAscSorted(result.items(), propertyExtractor),
+            result -> assertThatIsSortedBy(result.items(), propertyExtractor, stringComparator));
+    assertThat(resultDesc)
+        .satisfiesAnyOf(
+            result ->
+                assertThatIsSortedBy(
+                    result.items(), propertyExtractor, CASE_INSENSITIVE_ORDER.reversed()),
+            result -> assertThatIsDescSorted(result.items(), propertyExtractor),
+            result ->
+                assertThatIsSortedBy(
+                    result.items(), propertyExtractor, stringComparator.reversed()));
+  }
+
   public static <T, U extends Comparable<U>> void assertThatIsAscSorted(
       final List<T> items, final Function<T, U> propertyExtractor) {
     assertThatIsSortedBy(items, propertyExtractor, Comparator.naturalOrder());
@@ -1071,5 +1139,89 @@ public final class TestHelper {
         items.stream().map(propertyExtractor).filter(Objects::nonNull).sorted(comparator).toList();
     assertThat(items.stream().map(propertyExtractor).filter(Objects::nonNull).toList())
         .containsExactlyElementsOf(sorted);
+  }
+
+  /**
+   * Waits for a cluster variable to be indexed in Elasticsearch/OpenSearch after creation.
+   *
+   * @param camundaClient CamundaClient
+   * @param variableName the name of the cluster variable to retrieve
+   * @param expectedValue the expected value of the variable
+   */
+  public static void waitForClusterVariableToBeIndexed(
+      final CamundaClient camundaClient, final String variableName, final String expectedValue) {
+    Awaitility.await("should index cluster variable")
+        .atMost(TIMEOUT_DATA_AVAILABILITY)
+        .ignoreExceptions() // Ignore exceptions and continue retrying
+        .untilAsserted(
+            () -> {
+              final var result =
+                  camundaClient
+                      .newGloballyScopedClusterVariableGetRequest()
+                      .withName(variableName)
+                      .send()
+                      .join();
+              assertThat(result).isNotNull();
+              assertThat(result.getValue()).contains(expectedValue);
+            });
+  }
+
+  /**
+   * Waits for a tenant-scoped cluster variable to be indexed in Elasticsearch/OpenSearch after
+   * creation.
+   *
+   * @param camundaClient CamundaClient
+   * @param variableName the name of the cluster variable to retrieve
+   * @param tenantId the tenant ID of the variable
+   * @param expectedValue the expected value of the variable
+   */
+  public static void waitForClusterVariableToBeIndexed(
+      final CamundaClient camundaClient,
+      final String variableName,
+      final String tenantId,
+      final String expectedValue) {
+    Awaitility.await("should index tenant-scoped cluster variable")
+        .atMost(TIMEOUT_DATA_AVAILABILITY)
+        .ignoreExceptions() // Ignore exceptions and continue retrying
+        .untilAsserted(
+            () -> {
+              final var result =
+                  camundaClient
+                      .newTenantScopedClusterVariableGetRequest(tenantId)
+                      .withName(variableName)
+                      .send()
+                      .join();
+              assertThat(result).isNotNull();
+              assertThat(result.getValue()).contains(expectedValue);
+            });
+  }
+
+  /**
+   * Waits for multiple cluster variables to be indexed using search requests. This method verifies
+   * that all variables in the provided map have been exported and indexed.
+   *
+   * @param camundaClient CamundaClient
+   * @param variablesToWaitFor a map of variable names to their expected values
+   */
+  public static void waitForClusterVariablesToBeIndexed(
+      final CamundaClient camundaClient, final Map<String, String> variablesToWaitFor) {
+    Awaitility.await("should index all cluster variables")
+        .atMost(TIMEOUT_DATA_AVAILABILITY)
+        .ignoreExceptions() // Ignore exceptions and continue retrying
+        .untilAsserted(
+            () -> {
+              final var response = camundaClient.newClusterVariableSearchRequest().send().join();
+              assertThat(response).isNotNull();
+              assertThat(response.items()).isNotEmpty();
+
+              // Verify each expected variable is present with correct value
+              for (final var entry : variablesToWaitFor.entrySet()) {
+                final var expectedName = entry.getKey();
+                final var expectedValue = entry.getValue();
+
+                assertThat(response.items())
+                    .anySatisfy(item -> assertThat(item.getName()).isEqualTo(expectedName));
+              }
+            });
   }
 }

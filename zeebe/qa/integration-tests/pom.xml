@@ -294,7 +294,7 @@
 
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>toxiproxy</artifactId>
+      <artifactId>testcontainers-toxiproxy</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -342,7 +342,7 @@
 
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -529,7 +529,7 @@
 
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>elasticsearch</artifactId>
+      <artifactId>testcontainers-elasticsearch</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -542,12 +542,6 @@
     <dependency>
       <groupId>io.camunda</groupId>
       <artifactId>camunda-search-client</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>io.camunda</groupId>
-      <artifactId>camunda-spring-utils</artifactId>
       <scope>test</scope>
     </dependency>
 

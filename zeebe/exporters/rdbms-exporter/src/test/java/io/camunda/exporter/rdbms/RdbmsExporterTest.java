@@ -9,6 +9,7 @@ package io.camunda.exporter.rdbms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.camunda.db.rdbms.write.RdbmsWriter;
+import io.camunda.db.rdbms.write.RdbmsWriterMetrics;
 import io.camunda.db.rdbms.write.queue.ExecutionQueue;
 import io.camunda.db.rdbms.write.queue.PostFlushListener;
 import io.camunda.db.rdbms.write.queue.PreFlushListener;
@@ -47,6 +49,7 @@ class RdbmsExporterTest {
   private StubExecutionQueue executionQueue;
   private ExporterPositionService positionService;
   private HistoryCleanupService historyCleanupService;
+  private RdbmsWriterMetrics metrics;
 
   private ScheduledTask flushTask;
   private ScheduledTask cleanupTask;
@@ -77,6 +80,51 @@ class RdbmsExporterTest {
     verify(jobHandler).export(record);
     verify(otherJobHandler, never()).export(record);
     verify(piHandler, never()).export(record);
+  }
+
+  @Test
+  void shouldCheckForFlushOnProcessedRecord() {
+    // given
+    final var jobHandler = mockHandler(ValueType.JOB);
+    final var record = mockRecord(ValueType.JOB, 1);
+
+    createExporter(b -> b.withHandler(ValueType.JOB, jobHandler));
+
+    // when
+    exporter.export(record);
+
+    // then
+    verify(rdbmsWriter).flush(anyBoolean());
+  }
+
+  @Test
+  void shouldNotCheckForFlushOnNotProcessedRecord() {
+    // given
+    final var jobHandler = mockHandler(ValueType.JOB, false);
+    final var record = mockRecord(ValueType.JOB, 1);
+
+    createExporter(b -> b.withHandler(ValueType.JOB, jobHandler));
+
+    // when
+    exporter.export(record);
+
+    // then
+    verify(rdbmsWriter, never()).flush(anyBoolean());
+  }
+
+  @Test
+  void shouldNotCheckForFlushOnNoHandler() {
+    // given
+    final var jobHandler = mockHandler(ValueType.PROCESS_INSTANCE);
+    final var record = mockRecord(ValueType.JOB, 1);
+
+    createExporter(b -> b.withHandler(ValueType.JOB, jobHandler));
+
+    // when
+    exporter.export(record);
+
+    // then
+    verify(rdbmsWriter, never()).flush(anyBoolean());
   }
 
   @Test
@@ -224,6 +272,98 @@ class RdbmsExporterTest {
     verify(rdbmsPurger).purgeRdbms();
   }
 
+  @Test
+  void shouldTrackRecordExportingLatency() {
+    // given
+    createExporter(b -> b.withHandler(ValueType.JOB, mockHandler(ValueType.JOB)));
+
+    final var record = mockRecord(ValueType.JOB, 1);
+    when(record.getTimestamp()).thenReturn(System.currentTimeMillis() - 100);
+
+    // when
+    exporter.export(record);
+    executionQueue.flush();
+
+    // then
+    verify(metrics).recordExportingLatency(Mockito.longThat(latency -> latency >= 100));
+  }
+
+  @Test
+  void shouldTrackOldestRecordTimestampInBatch() {
+    // given
+    createExporter(b -> b.withHandler(ValueType.JOB, mockHandler(ValueType.JOB)));
+
+    final var newerRecord = mockRecord(ValueType.JOB, 1);
+    final var olderRecord = mockRecord(ValueType.JOB, 2);
+    when(newerRecord.getTimestamp()).thenReturn(System.currentTimeMillis() - 100);
+    when(olderRecord.getTimestamp()).thenReturn(System.currentTimeMillis() - 200);
+
+    // when - export newer record first, then older record
+    exporter.export(newerRecord);
+    exporter.export(olderRecord);
+    executionQueue.flush();
+
+    // then - latency should be based on the older record
+    verify(metrics).recordExportingLatency(Mockito.longThat(latency -> latency >= 200));
+  }
+
+  @Test
+  void shouldResetOldestRecordTimestampAfterFlush() {
+    // given
+    createExporter(b -> b.withHandler(ValueType.JOB, mockHandler(ValueType.JOB)));
+
+    final var firstRecord = mockRecord(ValueType.JOB, 1);
+    final var secondRecord = mockRecord(ValueType.JOB, 2);
+    when(firstRecord.getTimestamp()).thenReturn(System.currentTimeMillis() - 100);
+    when(secondRecord.getTimestamp()).thenReturn(System.currentTimeMillis() - 50);
+
+    // when - export first record and flush
+    exporter.export(firstRecord);
+    executionQueue.flush();
+
+    // then - first metric should be recorded
+    verify(metrics).recordExportingLatency(Mockito.longThat(latency -> latency >= 100));
+
+    // when - export second record and flush
+    exporter.export(secondRecord);
+    executionQueue.flush();
+
+    // then - second metric should also be recorded (total of 2 calls)
+    verify(metrics, times(2)).recordExportingLatency(Mockito.anyLong());
+  }
+
+  @Test
+  void shouldNotRecordMetricWhenNoRecordsExported() {
+    // given
+    createExporter(b -> b.withHandler(ValueType.JOB, mockHandler(ValueType.JOB, false)));
+
+    final var record = mockRecord(ValueType.JOB, 1);
+    when(record.getTimestamp()).thenReturn(System.currentTimeMillis());
+
+    // when - record cannot be exported
+    exporter.export(record);
+    executionQueue.flush();
+
+    // then - metric should not be recorded
+    verify(metrics, never()).recordExportingLatency(Mockito.anyLong());
+  }
+
+  @Test
+  void shouldHandleUnixEpochTimestamp() {
+    // given
+    createExporter(b -> b.withHandler(ValueType.JOB, mockHandler(ValueType.JOB)));
+
+    final var record = mockRecord(ValueType.JOB, 1);
+    when(record.getTimestamp()).thenReturn(0L); // Unix epoch
+
+    // when
+    exporter.export(record);
+    executionQueue.flush();
+
+    // then - metric should be recorded even for timestamp 0
+    verify(metrics).recordExportingLatency(Mockito.anyLong());
+  }
+
   // ------------------------------------------------
   // mocks and stubs
   // ------------------------------------------------
@@ -277,7 +417,13 @@ class RdbmsExporterTest {
     when(rdbmsWriter.getExporterPositionService()).thenReturn(positionService);
     when(rdbmsWriter.getExecutionQueue()).thenReturn(executionQueue);
     when(rdbmsWriter.getRdbmsPurger()).thenReturn(rdbmsPurger);
-    doAnswer((invocation) -> executionQueue.flush()).when(rdbmsWriter).flush();
+
+    // Mock getMetrics() to return a mock metrics instance by default
+    metrics = mock(RdbmsWriterMetrics.class);
+    when(rdbmsWriter.getMetrics()).thenReturn(metrics);
+
+    doAnswer((invocation) -> executionQueue.flush()).when(rdbmsWriter).flush(true);
+    doAnswer((invocation) -> executionQueue.checkQueueForFlush()).when(rdbmsWriter).flush(false);
 
     final var builder =
         new RdbmsExporter.Builder()
@@ -318,7 +464,12 @@ class RdbmsExporterTest {
     }
 
     @Override
-    public boolean tryMergeWithExistingQueueItem(final QueueItemMerger... combiners) {
+    public boolean tryMergeWithExistingQueueItem(final QueueItemMerger combiners) {
+      return false;
+    }
+
+    @Override
+    public boolean checkQueueForFlush() {
       return false;
     }
   }

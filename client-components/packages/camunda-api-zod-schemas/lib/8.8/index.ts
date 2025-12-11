@@ -82,6 +82,7 @@ import {
 	createMigrationBatchOperation,
 	createModificationBatchOperation,
 	modifyProcessInstance,
+	resolveProcessInstanceIncidents,
 } from './process-instance';
 import {
 	getUserTask,
@@ -296,6 +297,7 @@ const endpoints = {
 	createMigrationBatchOperation,
 	createModificationBatchOperation,
 	modifyProcessInstance,
+	resolveProcessInstanceIncidents,
 } as const;
 
 export {currentUserSchema, getCurrentUser, type CurrentUser} from './authentication';
@@ -432,8 +434,8 @@ export {
 	elementInstanceTypeSchema,
 	elementInstanceSchema,
 	elementInstanceFilterSchema,
-  queryElementInstanceIncidentsRequestBodySchema,
-  queryElementInstanceIncidentsResponseBodySchema,
+	queryElementInstanceIncidentsRequestBodySchema,
+	queryElementInstanceIncidentsResponseBodySchema,
 	type ElementInstanceState,
 	type ElementInstanceType,
 	type ElementInstance,
@@ -441,8 +443,8 @@ export {
 	type QueryElementInstancesResponseBody,
 	type GetElementInstanceResponseBody,
 	type UpdateElementInstanceVariablesRequestBody,
-  type QueryElementInstanceIncidentsRequestBody,
-  type QueryElementInstanceIncidentsResponseBody,
+	type QueryElementInstanceIncidentsRequestBody,
+	type QueryElementInstanceIncidentsResponseBody,
 } from './element-instance';
 export {
 	createGroupRequestBodySchema,
@@ -610,6 +612,7 @@ export {
 	type CreateModificationBatchOperationRequestBody,
 	type CreateModificationBatchOperationResponseBody,
 	type ModifyProcessInstanceRequestBody,
+	type ResolveProcessInstanceIncidentsResponseBody,
 } from './process-instance';
 export {
 	userTaskSchema,
@@ -664,7 +667,7 @@ export {
 	type QueryPage,
 	type QuerySortOrder,
 	type ProblemDetailsResponse,
-} from './common';
+} from '../common';
 export {
 	createDeploymentResponseBodySchema,
 	deleteResourceRequestBodySchema,

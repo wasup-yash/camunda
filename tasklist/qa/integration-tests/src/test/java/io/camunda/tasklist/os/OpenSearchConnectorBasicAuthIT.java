@@ -23,7 +23,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.opensearch.client.opensearch.OpenSearchClient;
-import org.opensearch.testcontainers.OpensearchContainer;
+import org.opensearch.testcontainers.OpenSearchContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -50,9 +50,9 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ContextConfiguration(initializers = {OpenSearchConnectorBasicAuthIT.OpenSearchStarter.class})
 public class OpenSearchConnectorBasicAuthIT extends TasklistIntegrationTest {
 
-  static OpensearchContainer opensearch =
-      (OpensearchContainer)
-          new OpensearchContainer("opensearchproject/opensearch:2.17.0")
+  static OpenSearchContainer opensearch =
+      (OpenSearchContainer)
+          new OpenSearchContainer("opensearchproject/opensearch:2.17.0")
               .withEnv(
                   Map.of(
                       // "plugins.security.disabled", "false",
@@ -93,25 +93,11 @@ public class OpenSearchConnectorBasicAuthIT extends TasklistIntegrationTest {
       final String osUrl =
           String.format("http://%s:%s", opensearch.getHost(), opensearch.getMappedPort(9200));
       TestPropertyValues.of(
-              // Unified Configuration
               "camunda.data.secondary-storage.type=opensearch",
               "camunda.data.secondary-storage.opensearch.url=" + osUrl,
               "camunda.data.secondary-storage.opensearch.cluster-name=docker-cluster",
-
-              // TODO: The following legacy values are set somewhere equal to http://localhost:9200.
-              //  We should find them and unset them, so that they don't cause conflicts. In the
-              //  meantime, this test can run in double configuration mode.
-              "camunda.database.url=" + osUrl,
-              "camunda.tasklist.opensearch.url=" + osUrl,
-              "camunda.operate.opensearch.url=" + osUrl,
-              // Unified config
               "camunda.data.secondary-storage.opensearch.username=opensearch",
-              "camunda.data.secondary-storage.opensearch.password=changeme",
-
-              // ---
-
-              "camunda.tasklist.opensearch.username=opensearch",
-              "camunda.tasklist.opensearch.password=changeme")
+              "camunda.data.secondary-storage.opensearch.password=changeme")
           .applyTo(applicationContext.getEnvironment());
     }
   }

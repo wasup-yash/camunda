@@ -28,6 +28,8 @@ import io.camunda.zeebe.protocol.record.intent.ClockIntent;
 import io.camunda.zeebe.protocol.record.intent.ClusterVariableIntent;
 import io.camunda.zeebe.protocol.record.intent.CommandDistributionIntent;
 import io.camunda.zeebe.protocol.record.intent.CompensationSubscriptionIntent;
+import io.camunda.zeebe.protocol.record.intent.ConditionalEvaluationIntent;
+import io.camunda.zeebe.protocol.record.intent.ConditionalSubscriptionIntent;
 import io.camunda.zeebe.protocol.record.intent.DecisionEvaluationIntent;
 import io.camunda.zeebe.protocol.record.intent.DecisionIntent;
 import io.camunda.zeebe.protocol.record.intent.DecisionRequirementsIntent;
@@ -36,7 +38,9 @@ import io.camunda.zeebe.protocol.record.intent.DeploymentIntent;
 import io.camunda.zeebe.protocol.record.intent.ErrorIntent;
 import io.camunda.zeebe.protocol.record.intent.EscalationIntent;
 import io.camunda.zeebe.protocol.record.intent.FormIntent;
+import io.camunda.zeebe.protocol.record.intent.GlobalListenerBatchIntent;
 import io.camunda.zeebe.protocol.record.intent.GroupIntent;
+import io.camunda.zeebe.protocol.record.intent.HistoryDeletionIntent;
 import io.camunda.zeebe.protocol.record.intent.IdentitySetupIntent;
 import io.camunda.zeebe.protocol.record.intent.IncidentIntent;
 import io.camunda.zeebe.protocol.record.intent.Intent;
@@ -148,7 +152,27 @@ public final class EventAppliers implements EventApplier {
     registerUsageMetricsAppliers(state);
     registerMultiInstanceAppliers(state);
     registerClusterVariableEventAppliers(state);
+    registerHistoryDeletionAppliers();
+    registerConditionalSubscriptionAppliers(state);
+    registerConditionalEvaluationAppliers();
+    registerGlobalListenersEventAppliers(state);
     return this;
+  }
+
+  private void registerConditionalSubscriptionAppliers(final MutableProcessingState state) {
+    register(
+        ConditionalSubscriptionIntent.CREATED,
+        new ConditionalSubscriptionCreatedApplier(state.getConditionalSubscriptionState()));
+    register(
+        ConditionalSubscriptionIntent.TRIGGERED,
+        new ConditionalSubscriptionTriggeredApplier(state.getConditionalSubscriptionState()));
+    register(
+        ConditionalSubscriptionIntent.DELETED,
+        new ConditionalSubscriptionDeletedApplier(state.getConditionalSubscriptionState()));
+  }
+
+  private void registerGlobalListenersEventAppliers(final MutableProcessingState state) {
+    register(GlobalListenerBatchIntent.CONFIGURED, NOOP_EVENT_APPLIER);
   }
 
   private void registerClusterVariableEventAppliers(final MutableProcessingState state) {
@@ -286,6 +310,7 @@ public final class EventAppliers implements EventApplier {
     register(
         RuntimeInstructionIntent.INTERRUPTED,
         new RuntimeInstructionInterruptedApplier(elementInstanceState));
+    register(ProcessInstanceIntent.CANCELING, NOOP_EVENT_APPLIER);
   }
 
   private void registerProcessInstanceCreationAppliers(final MutableProcessingState state) {
@@ -372,6 +397,10 @@ public final class EventAppliers implements EventApplier {
     register(
         MessageSubscriptionIntent.MIGRATED,
         new MessageSubscriptionMigratedApplier(state.getMessageSubscriptionState()));
+  }
+
+  private void registerConditionalEvaluationAppliers() {
+    register(ConditionalEvaluationIntent.EVALUATED, NOOP_EVENT_APPLIER);
   }
 
   private void registerMessageStartEventSubscriptionAppliers(final MutableProcessingState state) {
@@ -700,6 +729,10 @@ public final class EventAppliers implements EventApplier {
     final var asyncRequestState = state.getAsyncRequestState();
     register(AsyncRequestIntent.RECEIVED, new AsyncRequestReceivedApplier(asyncRequestState));
     register(AsyncRequestIntent.PROCESSED, new AsyncRequestProcessedApplier(asyncRequestState));
+  }
+
+  private void registerHistoryDeletionAppliers() {
+    register(HistoryDeletionIntent.DELETED, NOOP_EVENT_APPLIER);
   }
 
   private <I extends Intent> void register(final I intent, final TypedEventApplier<I, ?> applier) {

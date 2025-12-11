@@ -196,6 +196,37 @@ paths:
         "500":
           $ref: 'common-responses.yaml#/components/responses/InternalServerError'
 
+  /process-definitions/statistics/message-subscriptions:
+    post:
+      x-eventually-consistent: true
+      tags:
+        - Process definition
+      operationId: getProcessDefinitionMessageSubscriptionStatistics
+      summary: Get message subscription statistics
+      description: |
+        Get message subscription statistics, grouped by process definition.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessDefinitionMessageSubscriptionStatisticsQuery"
+      responses:
+        "200":
+          description: The process definition message subscription statistics result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessDefinitionMessageSubscriptionStatisticsQueryResult"
+        "400":
+          $ref: "common-responses.yaml#/components/responses/InvalidData"
+        "401":
+          $ref: "common-responses.yaml#/components/responses/Unauthorized"
+        "403":
+          $ref: "common-responses.yaml#/components/responses/Forbidden"
+        "500":
+          $ref: "common-responses.yaml#/components/responses/InternalServerError"
+
   /process-definitions/statistics/process-instances:
     post:
       x-eventually-consistent: true
@@ -204,7 +235,7 @@ paths:
       operationId: getProcessDefinitionInstanceStatistics
       summary: Get process instance statistics
       description: |
-        Get statistics about process instances, grouped by process definition.
+        Get statistics about process instances, grouped by process definition and tenant.
       requestBody:
         required: false
         content:
@@ -284,7 +315,7 @@ components:
             - processDefinitionId
             - tenantId
         order:
-          $ref: 'enums.yaml#/components/schemas/SortOrderEnum'
+          $ref: 'search-models.yaml#/components/schemas/SortOrderEnum'
       required:
         - field
 
@@ -432,6 +463,52 @@ components:
           type: integer
           format: int64
 
+    ProcessDefinitionMessageSubscriptionStatisticsQuery:
+      type: object
+      properties:
+        page:
+          allOf:
+            - $ref: "search-models.yaml#/components/schemas/CursorForwardPagination"
+        filter:
+          description: The message subscription filters.
+          allOf:
+            - $ref: "messages.yaml#/components/schemas/MessageSubscriptionFilter"
+
+    ProcessDefinitionMessageSubscriptionStatisticsQueryResult:
+      type: object
+      allOf:
+        - $ref: "search-models.yaml#/components/schemas/SearchQueryResponse"
+      properties:
+        items:
+          description: The matching process definition message subscription statistics.
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessDefinitionMessageSubscriptionStatisticsResult"
+
+    ProcessDefinitionMessageSubscriptionStatisticsResult:
+      type: object
+      properties:
+        processDefinitionId:
+          description: The process definition ID associated with this message subscription.
+          allOf:
+            - $ref: "identifiers.yaml#/components/schemas/ProcessDefinitionId"
+        tenantId:
+          description: The tenant ID associated with this message subscription.
+          allOf:
+            - $ref: "identifiers.yaml#/components/schemas/TenantId"
+        processDefinitionKey:
+          description: The process definition key associated with this message subscription.
+          allOf:
+            - $ref: "keys.yaml#/components/schemas/ProcessDefinitionKey"
+        processInstancesWithActiveSubscriptions:
+          description: The number of process instances with active message subscriptions.
+          type: integer
+          format: int64
+        activeSubscriptions:
+          description: The total number of active message subscriptions for this process definition key.
+          type: integer
+          format: int64
+
     ProcessDefinitionInstanceStatisticsQuery:
       type: object
       properties:
@@ -444,10 +521,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProcessDefinitionInstanceStatisticsQuerySortRequest'
-        filter:
-          description: The process definition instance statistics filters.
-          allOf:
-            - $ref: 'process-instances.yaml#/components/schemas/ProcessInstanceFilter'
 
     ProcessDefinitionInstanceStatisticsQueryResult:
       type: object
@@ -469,6 +542,8 @@ components:
       properties:
         processDefinitionId:
           $ref: 'identifiers.yaml#/components/schemas/ProcessDefinitionId'
+        tenantId:
+          $ref: 'identifiers.yaml#/components/schemas/TenantId'
         latestProcessDefinitionName:
           description: Name of the latest deployed process definition instance version.
           type: string
@@ -495,7 +570,7 @@ components:
             - activeInstancesWithIncidentCount
             - activeInstancesWithoutIncidentCount
         order:
-          $ref: 'enums.yaml#/components/schemas/SortOrderEnum'
+          $ref: 'search-models.yaml#/components/schemas/SortOrderEnum'
       required:
         - field
 
@@ -535,6 +610,19 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProcessDefinitionInstanceVersionStatisticsQuerySortRequest'
+        filter:
+          description: The process definition instance version statistics search filters.
+          allOf:
+            - $ref: '#/components/schemas/ProcessDefinitionInstanceVersionStatisticsFilter'
+
+    ProcessDefinitionInstanceVersionStatisticsFilter:
+      description: Process definition instance version statistics search filter.
+      type: object
+      properties:
+        tenantId:
+          allOf:
+              - $ref: 'identifiers.yaml#/components/schemas/TenantId'
+          description: Tenant ID of this process definition.
 
     ProcessDefinitionInstanceVersionStatisticsQueryResult:
       type: object
@@ -565,6 +653,10 @@ components:
         processDefinitionName:
           description: The name of the process definition.
           type: string
+        tenantId:
+          description: The tenant ID associated with the process definition.
+          allOf:
+            - $ref: 'identifiers.yaml#/components/schemas/TenantId'
         processDefinitionVersion:
           description: The version number of the process definition.
           type: integer
@@ -580,6 +672,7 @@ components:
       required:
         - processDefinitionId
         - processDefinitionKey
+        - tenantId
         - processDefinitionName
         - processDefinitionVersion
         - activeInstancesWithIncidentCount
@@ -599,6 +692,6 @@ components:
             - activeInstancesWithIncidentCount
             - activeInstancesWithoutIncidentCount
         order:
-          $ref: 'enums.yaml#/components/schemas/SortOrderEnum'
+          $ref: 'search-models.yaml#/components/schemas/SortOrderEnum'
       required:
         - field

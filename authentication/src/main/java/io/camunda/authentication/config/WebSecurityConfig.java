@@ -10,7 +10,6 @@ package io.camunda.authentication.config;
 import static io.camunda.security.configuration.headers.ContentSecurityPolicyConfig.DEFAULT_SAAS_SECURITY_POLICY;
 import static io.camunda.security.configuration.headers.ContentSecurityPolicyConfig.DEFAULT_SM_SECURITY_POLICY;
 
-import com.nimbusds.jose.JOSEObjectType;
 import io.camunda.authentication.CamundaUserDetailsService;
 import io.camunda.authentication.ConditionalOnAuthenticationMethod;
 import io.camunda.authentication.ConditionalOnProtectedApi;
@@ -25,6 +24,7 @@ import io.camunda.authentication.filters.AdminUserCheckFilter;
 import io.camunda.authentication.filters.OAuth2RefreshTokenFilter;
 import io.camunda.authentication.filters.WebComponentAuthorizationCheckFilter;
 import io.camunda.authentication.handler.AuthFailureHandler;
+import io.camunda.authentication.handler.LoggingAuthenticationFailureHandler;
 import io.camunda.authentication.handler.OAuth2AuthenticationExceptionHandler;
 import io.camunda.authentication.service.MembershipService;
 import io.camunda.security.auth.CamundaAuthenticationConverter;
@@ -67,6 +67,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -87,6 +88,7 @@ import org.springframework.security.oauth2.client.endpoint.NimbusJwtClientAuthen
 import org.springframework.security.oauth2.client.endpoint.OAuth2RefreshTokenGrantRequest;
 import org.springframework.security.oauth2.client.endpoint.RestClientRefreshTokenTokenResponseClient;
 import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenDecoderFactory;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
@@ -97,8 +99,11 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepo
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.oauth2.jwt.SupplierJwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.AuthenticationEntryPointFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -146,9 +151,6 @@ public class WebSecurityConfig {
           "/new/**",
           "/tasklist/new/**",
           "/favicon.ico");
-  // We explicitly support the "at+jwt" JWT 'typ' header defined in
-  // https://datatracker.ietf.org/doc/html/rfc9068#name-header
-  static final JOSEObjectType AT_JWT = new JOSEObjectType("at+jwt");
   private static final String SPRING_DEFAULT_UI_CSS = "/default-ui.css";
   public static final Set<String> WEBAPP_PATHS =
       Set.of(
@@ -751,6 +753,15 @@ public class WebSecurityConfig {
     }
 
     @Bean
+    public OidcUserService oidcUserService() {
+      final var userService = new OidcUserService();
+      // disable fetching user info from the IdP, as we never use it, and this can cause rate
+      // limiting issues with some IdPs
+      userService.setRetrieveUserInfo(ignored -> false);
+      return userService;
+    }
+
+    @Bean
     @Order(ORDER_WEBAPP_API)
     @ConditionalOnProtectedApi
     public SecurityFilterChain oidcApiSecurity(
@@ -792,7 +803,10 @@ public class WebSecurityConfig {
               .formLogin(AbstractHttpConfigurer::disable)
               .anonymous(AbstractHttpConfigurer::disable)
               .oauth2ResourceServer(
-                  oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder)))
+                  oauth2 ->
+                      oauth2
+                          .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder))
+                          .withObjectPostProcessor(postProcessBearerTokenFailureHandler()))
               .oauth2Login(AbstractHttpConfigurer::disable)
               .oidcLogout(AbstractHttpConfigurer::disable)
               .logout(AbstractHttpConfigurer::disable);
@@ -819,7 +833,8 @@ public class WebSecurityConfig {
         final CookieCsrfTokenRepository csrfTokenRepository,
         final OAuth2AuthorizedClientRepository authorizedClientRepository,
         final OAuth2AuthorizedClientManager authorizedClientManager,
-        final OidcTokenEndpointCustomizer tokenEndpointCustomizer)
+        final OidcTokenEndpointCustomizer tokenEndpointCustomizer,
+        final OidcUserService oidcUserService)
         throws Exception {
       final var filterChainBuilder =
           httpSecurity
@@ -864,6 +879,7 @@ public class WebSecurityConfig {
                                     authorizationRequestResolver(
                                         clientRegistrationRepository, oidcProviderRepository)))
                         .tokenEndpoint(tokenEndpointCustomizer)
+                        .userInfoEndpoint(c -> c.oidcUserService(oidcUserService))
                         .failureHandler(new OAuth2AuthenticationExceptionHandler());
                   })
               .oidcLogout(httpSecurityOidcLogoutConfigurer -> {})
@@ -909,6 +925,23 @@ public class WebSecurityConfig {
         LOG.warn(
             "OAuth2RefreshTokenFilter is not registered because no OAuth2AuthorizedClientService or OAuth2AuthorizedClientManager is available.");
       }
+    }
+
+    private static ObjectPostProcessor<BearerTokenAuthenticationFilter>
+        postProcessBearerTokenFailureHandler() {
+      return new ObjectPostProcessor<>() {
+        @Override
+        public <O extends BearerTokenAuthenticationFilter> O postProcess(final O filter) {
+          // the same failure handler as instantiated by spring per default.
+          final AuthenticationEntryPointFailureHandler defaultFailureHandler =
+              new AuthenticationEntryPointFailureHandler(new BearerTokenAuthenticationEntryPoint());
+          // decorated with logging technical exceptions on WARN
+          final LoggingAuthenticationFailureHandler loggingFailureHandler =
+              new LoggingAuthenticationFailureHandler(defaultFailureHandler);
+          filter.setAuthenticationFailureHandler(loggingFailureHandler);
+          return filter;
+        }
+      };
     }
   }
 

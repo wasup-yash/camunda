@@ -244,7 +244,7 @@ components:
             - startDate
             - endDate
         order:
-          $ref: 'enums.yaml#/components/schemas/SortOrderEnum'
+          $ref: 'search-models.yaml#/components/schemas/SortOrderEnum'
       required:
         - field
 
@@ -358,9 +358,10 @@ components:
             - batchOperationKey
             - itemKey
             - processInstanceKey
+            - processedDate
             - state
         order:
-          $ref: 'enums.yaml#/components/schemas/SortOrderEnum'
+          $ref: 'search-models.yaml#/components/schemas/SortOrderEnum'
       required:
         - field
 
@@ -396,12 +397,16 @@ components:
         processInstanceKey:
           description: The process instance key of the processed item.
           allOf:
-            - $ref: 'filters.yaml#/components/schemas/ProcessInstanceKeyFilterProperty'
+            - $ref: 'keys.yaml#/components/schemas/ProcessInstanceKeyFilterProperty'
         state:
           type: string
           description: The state of the batch operation.
           allOf:
             - $ref: '#/components/schemas/BatchOperationItemStateFilterProperty'
+        operationType:
+          description: The type of the batch operation.
+          allOf:
+            - $ref: '#/components/schemas/BatchOperationTypeFilterProperty'
 
     BatchOperationItemSearchQueryResult:
       type: object
@@ -475,6 +480,20 @@ components:
       required:
         - filter
 
+    ProcessInstanceDeletionBatchOperationRequest:
+      type: object
+      additionalProperties: false
+      description: The process instance filter that defines which process instances should be deleted.
+      properties:
+        filter:
+          allOf:
+            - $ref: 'process-instances.yaml#/components/schemas/ProcessInstanceFilter'
+          description: The process instance filter.
+        operationReference:
+          $ref: 'keys.yaml#/components/schemas/OperationReference'
+      required:
+        - filter
+
     ProcessInstanceMigrationBatchOperationRequest:
       type: object
       additionalProperties: false
@@ -534,9 +553,11 @@ components:
         - moveInstructions
 
     ProcessInstanceModificationMoveBatchOperationInstruction:
-      description: |-
-        Instructions describing a move operation. This instruction will terminate all active elementInstance
-        at sourceElementId and activate a new element instance for each terminated one at targetElementId.
+      description: |
+        Instructions describing a move operation. This instruction will terminate all active
+        element instances at `sourceElementId` and activate a new element instance for each
+        terminated one at `targetElementId`. The new element instances are created in the parent
+        scope of the source element instances.
       type: object
       properties:
         sourceElementId:

@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import io.camunda.search.entities.BatchOperationEntity.BatchOperationItemState;
 import io.camunda.search.entities.BatchOperationEntity.BatchOperationState;
 import io.camunda.search.entities.BatchOperationType;
+import io.camunda.search.entities.ClusterVariableScope;
 import io.camunda.search.entities.DecisionInstanceEntity.DecisionDefinitionType;
 import io.camunda.search.entities.DecisionInstanceEntity.DecisionInstanceState;
 import io.camunda.search.entities.FlowNodeInstanceEntity.FlowNodeState;
@@ -24,6 +25,11 @@ import io.camunda.search.entities.JobEntity.JobState;
 import io.camunda.search.entities.JobEntity.ListenerEventType;
 import io.camunda.search.entities.MessageSubscriptionEntity.MessageSubscriptionState;
 import io.camunda.search.entities.ProcessInstanceEntity.ProcessInstanceState;
+import io.camunda.webapps.schema.entities.auditlog.AuditLogActorType;
+import io.camunda.webapps.schema.entities.auditlog.AuditLogEntityType;
+import io.camunda.webapps.schema.entities.auditlog.AuditLogOperationCategory;
+import io.camunda.webapps.schema.entities.auditlog.AuditLogOperationResult;
+import io.camunda.webapps.schema.entities.auditlog.AuditLogOperationType;
 import io.camunda.zeebe.protocol.record.value.EntityType;
 import io.camunda.zeebe.util.collection.Tuple;
 import java.time.OffsetDateTime;
@@ -126,7 +132,38 @@ public class SearchColumnTest {
           Map.entry(
               EntityType.class,
               List.of(
-                  Tuple.of(EntityType.USER, EntityType.USER), Tuple.of(EntityType.USER, "USER"))));
+                  Tuple.of(EntityType.USER, EntityType.USER), Tuple.of(EntityType.USER, "USER"))),
+          Map.entry(
+              ClusterVariableScope.class,
+              List.of(
+                  Tuple.of(ClusterVariableScope.GLOBAL, ClusterVariableScope.GLOBAL),
+                  Tuple.of(ClusterVariableScope.GLOBAL, "GLOBAL"))),
+          Map.entry(
+              AuditLogActorType.class,
+              List.of(
+                  Tuple.of(AuditLogActorType.USER, AuditLogActorType.USER),
+                  Tuple.of(AuditLogActorType.USER, "USER"))),
+          Map.entry(
+              AuditLogEntityType.class,
+              List.of(
+                  Tuple.of(
+                      AuditLogEntityType.PROCESS_INSTANCE, AuditLogEntityType.PROCESS_INSTANCE),
+                  Tuple.of(AuditLogEntityType.PROCESS_INSTANCE, "PROCESS_INSTANCE"))),
+          Map.entry(
+              AuditLogOperationCategory.class,
+              List.of(
+                  Tuple.of(AuditLogOperationCategory.ADMIN, AuditLogOperationCategory.ADMIN),
+                  Tuple.of(AuditLogOperationCategory.ADMIN, "ADMIN"))),
+          Map.entry(
+              AuditLogOperationResult.class,
+              List.of(
+                  Tuple.of(AuditLogOperationResult.SUCCESS, AuditLogOperationResult.SUCCESS),
+                  Tuple.of(AuditLogOperationResult.SUCCESS, "SUCCESS"))),
+          Map.entry(
+              AuditLogOperationType.class,
+              List.of(
+                  Tuple.of(AuditLogOperationType.CREATE, AuditLogOperationType.CREATE),
+                  Tuple.of(AuditLogOperationType.CREATE, "CREATE"))));
 
   private static List<Object[]> provideSearchColumns() {
     return SearchColumnUtils.findAll().stream()

@@ -7,9 +7,11 @@
  */
 package io.camunda.db.rdbms;
 
+import io.camunda.db.rdbms.read.service.AuditLogDbReader;
 import io.camunda.db.rdbms.read.service.AuthorizationDbReader;
 import io.camunda.db.rdbms.read.service.BatchOperationDbReader;
 import io.camunda.db.rdbms.read.service.BatchOperationItemDbReader;
+import io.camunda.db.rdbms.read.service.ClusterVariableDbReader;
 import io.camunda.db.rdbms.read.service.CorrelatedMessageSubscriptionDbReader;
 import io.camunda.db.rdbms.read.service.DecisionDefinitionDbReader;
 import io.camunda.db.rdbms.read.service.DecisionInstanceDbReader;
@@ -23,6 +25,7 @@ import io.camunda.db.rdbms.read.service.JobDbReader;
 import io.camunda.db.rdbms.read.service.MappingRuleDbReader;
 import io.camunda.db.rdbms.read.service.MessageSubscriptionDbReader;
 import io.camunda.db.rdbms.read.service.ProcessDefinitionDbReader;
+import io.camunda.db.rdbms.read.service.ProcessDefinitionMessageSubscriptionStatisticsDbReader;
 import io.camunda.db.rdbms.read.service.ProcessInstanceDbReader;
 import io.camunda.db.rdbms.read.service.RoleDbReader;
 import io.camunda.db.rdbms.read.service.RoleMemberDbReader;
@@ -44,6 +47,7 @@ import java.util.function.Consumer;
 public class RdbmsService {
 
   private final RdbmsWriterFactory rdbmsWriterFactory;
+  private final AuditLogDbReader auditLogReader;
   private final AuthorizationDbReader authorizationReader;
   private final DecisionDefinitionDbReader decisionDefinitionReader;
   private final DecisionInstanceDbReader decisionInstanceReader;
@@ -55,6 +59,7 @@ public class RdbmsService {
   private final ProcessDefinitionDbReader processDefinitionReader;
   private final ProcessInstanceDbReader processInstanceReader;
   private final VariableDbReader variableReader;
+  private final ClusterVariableDbReader clusterVariableDbReader;
   private final RoleDbReader roleReader;
   private final RoleMemberDbReader roleMemberReader;
   private final TenantDbReader tenantReader;
@@ -70,10 +75,13 @@ public class RdbmsService {
   private final UsageMetricsDbReader usageMetricReader;
   private final UsageMetricTUDbReader usageMetricTUDbReader;
   private final MessageSubscriptionDbReader messageSubscriptionReader;
+  private final ProcessDefinitionMessageSubscriptionStatisticsDbReader
+      processDefinitionMessageSubscriptionStatisticsDbReader;
   private final CorrelatedMessageSubscriptionDbReader correlatedMessageSubscriptionReader;
 
   public RdbmsService(
       final RdbmsWriterFactory rdbmsWriterFactory,
+      final AuditLogDbReader auditLogReader,
       final AuthorizationDbReader authorizationReader,
       final DecisionDefinitionDbReader decisionDefinitionReader,
       final DecisionInstanceDbReader decisionInstanceReader,
@@ -85,6 +93,7 @@ public class RdbmsService {
       final ProcessDefinitionDbReader processDefinitionReader,
       final ProcessInstanceDbReader processInstanceReader,
       final VariableDbReader variableReader,
+      final ClusterVariableDbReader clusterVariableDbReader,
       final RoleDbReader roleReader,
       final RoleMemberDbReader roleMemberReader,
       final TenantDbReader tenantReader,
@@ -100,8 +109,11 @@ public class RdbmsService {
       final UsageMetricsDbReader usageMetricReader,
       final UsageMetricTUDbReader usageMetricTUDbReader,
       final MessageSubscriptionDbReader messageSubscriptionReader,
+      final ProcessDefinitionMessageSubscriptionStatisticsDbReader
+          processDefinitionMessageSubscriptionStatisticsDbReader,
       final CorrelatedMessageSubscriptionDbReader correlatedMessageSubscriptionReader) {
     this.rdbmsWriterFactory = rdbmsWriterFactory;
+    this.auditLogReader = auditLogReader;
     this.authorizationReader = authorizationReader;
     this.decisionRequirementsReader = decisionRequirementsReader;
     this.decisionDefinitionReader = decisionDefinitionReader;
@@ -115,6 +127,7 @@ public class RdbmsService {
     this.roleMemberReader = roleMemberReader;
     this.tenantReader = tenantReader;
     this.variableReader = variableReader;
+    this.clusterVariableDbReader = clusterVariableDbReader;
     this.roleReader = roleReader;
     this.tenantMemberReader = tenantMemberReader;
     this.userReader = userReader;
@@ -128,11 +141,17 @@ public class RdbmsService {
     this.usageMetricReader = usageMetricReader;
     this.usageMetricTUDbReader = usageMetricTUDbReader;
     this.messageSubscriptionReader = messageSubscriptionReader;
+    this.processDefinitionMessageSubscriptionStatisticsDbReader =
+        processDefinitionMessageSubscriptionStatisticsDbReader;
     this.correlatedMessageSubscriptionReader = correlatedMessageSubscriptionReader;
   }
 
   public AuthorizationDbReader getAuthorizationReader() {
     return authorizationReader;
+  }
+
+  public AuditLogDbReader getAuditLogReader() {
+    return auditLogReader;
   }
 
   public DecisionDefinitionDbReader getDecisionDefinitionReader() {
@@ -181,6 +200,10 @@ public class RdbmsService {
 
   public VariableDbReader getVariableReader() {
     return variableReader;
+  }
+
+  public ClusterVariableDbReader getClusterVariableReader() {
+    return clusterVariableDbReader;
   }
 
   public RoleDbReader getRoleReader() {
@@ -233,6 +256,11 @@ public class RdbmsService {
 
   public MessageSubscriptionDbReader getMessageSubscriptionReader() {
     return messageSubscriptionReader;
+  }
+
+  public ProcessDefinitionMessageSubscriptionStatisticsDbReader
+      getProcessDefinitionMessageSubscriptionStatisticsDbReader() {
+    return processDefinitionMessageSubscriptionStatisticsDbReader;
   }
 
   public CorrelatedMessageSubscriptionDbReader getCorrelatedMessageSubscriptionReader() {

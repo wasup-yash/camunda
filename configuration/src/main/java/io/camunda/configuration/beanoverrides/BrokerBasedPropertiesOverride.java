@@ -9,7 +9,6 @@ package io.camunda.configuration.beanoverrides;
 
 import io.atomix.cluster.messaging.MessagingConfig.CompressionAlgorithm;
 import io.camunda.configuration.Azure;
-import io.camunda.configuration.Backup;
 import io.camunda.configuration.CommandApi;
 import io.camunda.configuration.Data;
 import io.camunda.configuration.DocumentBasedSecondaryStorageDatabase;
@@ -17,15 +16,19 @@ import io.camunda.configuration.Export;
 import io.camunda.configuration.Exporter;
 import io.camunda.configuration.Filesystem;
 import io.camunda.configuration.Filter;
+import io.camunda.configuration.FixedPartition;
 import io.camunda.configuration.Gcs;
 import io.camunda.configuration.Interceptor;
 import io.camunda.configuration.InterceptorPlugin;
 import io.camunda.configuration.InternalApi;
 import io.camunda.configuration.KeyStore;
+import io.camunda.configuration.Limit;
 import io.camunda.configuration.Membership;
 import io.camunda.configuration.Metrics;
 import io.camunda.configuration.NodeIdProvider.Type;
+import io.camunda.configuration.Partitioning;
 import io.camunda.configuration.PrimaryStorage;
+import io.camunda.configuration.PrimaryStorageBackup;
 import io.camunda.configuration.Processing;
 import io.camunda.configuration.Rdbms;
 import io.camunda.configuration.S3;
@@ -43,19 +46,22 @@ import io.camunda.zeebe.broker.system.configuration.ConfigManagerCfg;
 import io.camunda.zeebe.broker.system.configuration.ExporterCfg;
 import io.camunda.zeebe.broker.system.configuration.ExportingCfg;
 import io.camunda.zeebe.broker.system.configuration.MembershipCfg;
+import io.camunda.zeebe.broker.system.configuration.PartitioningCfg;
 import io.camunda.zeebe.broker.system.configuration.RaftCfg.FlushConfig;
 import io.camunda.zeebe.broker.system.configuration.SocketBindingCfg;
 import io.camunda.zeebe.broker.system.configuration.SocketBindingCfg.CommandApiCfg;
 import io.camunda.zeebe.broker.system.configuration.ThreadsCfg;
+import io.camunda.zeebe.broker.system.configuration.backpressure.LimitCfg;
 import io.camunda.zeebe.broker.system.configuration.backpressure.RateLimitCfg;
 import io.camunda.zeebe.broker.system.configuration.backpressure.ThrottleCfg;
 import io.camunda.zeebe.broker.system.configuration.backup.AzureBackupStoreConfig;
-import io.camunda.zeebe.broker.system.configuration.backup.BackupStoreCfg;
-import io.camunda.zeebe.broker.system.configuration.backup.BackupStoreCfg.BackupStoreType;
+import io.camunda.zeebe.broker.system.configuration.backup.BackupCfg;
+import io.camunda.zeebe.broker.system.configuration.backup.BackupCfg.BackupStoreType;
 import io.camunda.zeebe.broker.system.configuration.backup.FilesystemBackupStoreConfig;
 import io.camunda.zeebe.broker.system.configuration.backup.GcsBackupStoreConfig;
 import io.camunda.zeebe.broker.system.configuration.backup.GcsBackupStoreConfig.GcsBackupStoreAuth;
 import io.camunda.zeebe.broker.system.configuration.backup.S3BackupStoreConfig;
+import io.camunda.zeebe.broker.system.configuration.partitioning.Scheme;
 import io.camunda.zeebe.db.AccessMetricsConfiguration;
 import io.camunda.zeebe.dynamic.config.gossip.ClusterConfigurationGossiperConfig;
 import io.camunda.zeebe.gateway.impl.configuration.FilterCfg;
@@ -186,10 +192,79 @@ public class BrokerBasedPropertiesOverride {
         .getExperimental()
         .getFeatures()
         .setEnableMessageBodyOnExpired(processing.isEnableMessageBodyOnExpired());
+
+    populateFromEngine(override);
+  }
+
+  private void populateFromEngine(final BrokerBasedProperties override) {
+    populateFromDistribution(override);
+  }
+
+  private void populateFromDistribution(final BrokerBasedProperties override) {
+    final var distribution =
+        unifiedConfiguration.getCamunda().getProcessing().getEngine().getDistribution();
+
+    final var distributionCfg = override.getExperimental().getEngine().getDistribution();
+    distributionCfg.setMaxBackoffDuration(distribution.getMaxBackoffDuration());
+    distributionCfg.setRedistributionInterval(distribution.getRedistributionInterval());
   }
 
   private void populateFromFlowControl(final BrokerBasedProperties override) {
+    populateFromBackpressureLimitRequest(override);
     populateFromWrite(override);
+  }
+
+  private void populateFromBackpressureLimitRequest(final BrokerBasedProperties override) {
+    final Limit request =
+        unifiedConfiguration.getCamunda().getProcessing().getFlowControl().getRequest();
+
+    if (request == null) {
+      return;
+    }
+
+    final LimitCfg limitCfg =
+        Optional.ofNullable(override.getFlowControl().getRequest()).orElse(new LimitCfg());
+    limitCfg.setEnabled(request.isEnabled());
+    limitCfg.setUseWindowed(request.isWindowed());
+    // Convert kebab-case to uppercase with underscores for enum compatibility
+    limitCfg.setAlgorithm(
+        request.getAlgorithm() == null
+            ? "AIMD"
+            : request.getAlgorithm().replace("-", "_").toUpperCase());
+
+    // AIMD algorithm properties
+    limitCfg.getAimd().setRequestTimeout(request.getAimdRequestTimeout());
+    limitCfg.getAimd().setInitialLimit(request.getAimdInitialLimit());
+    limitCfg.getAimd().setMinLimit(request.getAimdMinLimit());
+    limitCfg.getAimd().setMaxLimit(request.getAimdMaxLimit());
+    limitCfg.getAimd().setBackoffRatio(request.getAimdBackoffRatio());
+
+    // Fixed algorithm properties
+    limitCfg.getFixed().setLimit(request.getFixedLimit());
+
+    // Vegas algorithm properties
+    limitCfg.getVegas().setAlpha(request.getVegasAlpha());
+    limitCfg.getVegas().setBeta(request.getVegasBeta());
+    limitCfg.getVegas().setInitialLimit(request.getVegasInitialLimit());
+
+    // Gradient algorithm properties
+    limitCfg.getGradient().setMinLimit(request.getGradientMinLimit());
+    limitCfg.getGradient().setInitialLimit(request.getGradientInitialLimit());
+    limitCfg.getGradient().setRttTolerance(request.getGradientRttTolerance());
+
+    // Gradient2 algorithm properties
+    limitCfg.getGradient2().setMinLimit(request.getGradient2MinLimit());
+    limitCfg.getGradient2().setInitialLimit(request.getGradient2InitialLimit());
+    limitCfg.getGradient2().setRttTolerance(request.getGradient2RttTolerance());
+    limitCfg.getGradient2().setLongWindow(request.getGradient2LongWindow());
+
+    // Legacy Vegas algorithm properties
+    limitCfg.getLegacyVegas().setInitialLimit(request.getLegacyVegasInitialLimit());
+    limitCfg.getLegacyVegas().setMaxConcurrency(request.getLegacyVegasMaxConcurrency());
+    limitCfg.getLegacyVegas().setAlphaLimit(request.getLegacyVegasAlphaLimit());
+    limitCfg.getLegacyVegas().setBetaLimit(request.getLegacyVegasBetaLimit());
+
+    override.getFlowControl().setRequest(limitCfg);
   }
 
   private void populateFromWrite(final BrokerBasedProperties override) {
@@ -306,6 +381,33 @@ public class BrokerBasedPropertiesOverride {
             CompressionAlgorithm.valueOf(cluster.getCompressionAlgorithm().name()));
 
     populateFromGlobalListeners(override);
+
+    populateFromPartitioning(override);
+  }
+
+  private void populateFromPartitioning(final BrokerBasedProperties override) {
+    final Partitioning partitioning =
+        unifiedConfiguration.getCamunda().getCluster().getPartitioning();
+
+    // Order between legacy and new partitioning props is not guaranteed.
+    // Log common partitioning warning instead of using UnifiedConfigurationHelper logging.
+    final var partioningCfg = override.getExperimental().getPartitioning();
+    if (partioningCfg.getScheme() == Scheme.FIXED && !partioningCfg.getFixed().isEmpty()) {
+      final String warningMessage =
+          String.format(
+              "The following legacy property is no longer supported and should be removed in favor of '%s': %s",
+              "camunda.cluster.partitioning.fixed", "zeebe.broker.experimental.partitioning.fixed");
+      LOGGER.warn(warningMessage);
+    }
+
+    if (partitioning.getScheme() == Partitioning.Scheme.FIXED
+        && !partitioning.getFixed().isEmpty()) {
+      final PartitioningCfg partitioningCfg = override.getExperimental().getPartitioning();
+      partitioningCfg.setScheme(Scheme.valueOf(partitioning.getScheme().name()));
+      final var fixedPartitionCfgList =
+          partitioning.getFixed().stream().map(FixedPartition::toFixedPartitionCfg).toList();
+      partitioningCfg.setFixed(fixedPartitionCfgList);
+    }
   }
 
   private void populateFromLongPolling(final BrokerBasedProperties override) {
@@ -490,20 +592,22 @@ public class BrokerBasedPropertiesOverride {
   }
 
   private void populateFromBackup(final BrokerBasedProperties override) {
-    final Backup backup = unifiedConfiguration.getCamunda().getData().getBackup();
-    final BackupStoreCfg backupStoreCfg = override.getData().getBackup();
-    backupStoreCfg.setStore(BackupStoreType.valueOf(backup.getStore().name()));
+    final PrimaryStorageBackup primaryStorageBackup =
+        unifiedConfiguration.getCamunda().getData().getPrimaryStorage().getBackup();
+    final BackupCfg backupCfg = override.getData().getBackup();
+    backupCfg.setStore(BackupStoreType.valueOf(primaryStorageBackup.getStore().name()));
 
     populateFromS3(override);
     populateFromGcs(override);
     populateFromAzure(override);
     populateFromFilesystem(override);
 
-    override.getData().setBackup(backupStoreCfg);
+    override.getData().setBackup(backupCfg);
   }
 
   private void populateFromS3(final BrokerBasedProperties override) {
-    final S3 s3 = unifiedConfiguration.getCamunda().getData().getBackup().getS3();
+    final S3 s3 =
+        unifiedConfiguration.getCamunda().getData().getPrimaryStorage().getBackup().getS3();
     final S3BackupStoreConfig s3BackupStoreConfig = override.getData().getBackup().getS3();
     s3BackupStoreConfig.setBucketName(s3.getBucketName());
     s3BackupStoreConfig.setEndpoint(s3.getEndpoint());
@@ -540,6 +644,8 @@ public class BrokerBasedPropertiesOverride {
 
     // Migrate RocksDB configuration from new unified config to old broker config structure
     populateFromRocksDb(override, primaryStorage);
+
+    populateBackupScheduler(override, primaryStorage.getBackup());
   }
 
   private void populateFromRocksDb(
@@ -571,7 +677,8 @@ public class BrokerBasedPropertiesOverride {
   }
 
   private void populateFromGcs(final BrokerBasedProperties override) {
-    final Gcs gcs = unifiedConfiguration.getCamunda().getData().getBackup().getGcs();
+    final Gcs gcs =
+        unifiedConfiguration.getCamunda().getData().getPrimaryStorage().getBackup().getGcs();
     final GcsBackupStoreConfig gcsBackupStoreConfig = override.getData().getBackup().getGcs();
     gcsBackupStoreConfig.setBucketName(gcs.getBucketName());
     gcsBackupStoreConfig.setBasePath(gcs.getBasePath());
@@ -582,7 +689,8 @@ public class BrokerBasedPropertiesOverride {
   }
 
   private void populateFromAzure(final BrokerBasedProperties override) {
-    final Azure azure = unifiedConfiguration.getCamunda().getData().getBackup().getAzure();
+    final Azure azure =
+        unifiedConfiguration.getCamunda().getData().getPrimaryStorage().getBackup().getAzure();
     final AzureBackupStoreConfig azureBackupStoreConfig = override.getData().getBackup().getAzure();
     azureBackupStoreConfig.setEndpoint(azure.getEndpoint());
     azureBackupStoreConfig.setAccountName(azure.getAccountName());
@@ -597,7 +705,13 @@ public class BrokerBasedPropertiesOverride {
 
   private void populateFromSasToken(final BrokerBasedProperties override) {
     final SasToken sasToken =
-        unifiedConfiguration.getCamunda().getData().getBackup().getAzure().getSasToken();
+        unifiedConfiguration
+            .getCamunda()
+            .getData()
+            .getPrimaryStorage()
+            .getBackup()
+            .getAzure()
+            .getSasToken();
     final SasTokenConfig sasTokenConfig = override.getData().getBackup().getAzure().getSasToken();
 
     if (sasToken != null) {
@@ -613,12 +727,23 @@ public class BrokerBasedPropertiesOverride {
 
   private void populateFromFilesystem(final BrokerBasedProperties override) {
     final Filesystem filesystem =
-        unifiedConfiguration.getCamunda().getData().getBackup().getFilesystem();
+        unifiedConfiguration.getCamunda().getData().getPrimaryStorage().getBackup().getFilesystem();
     final FilesystemBackupStoreConfig filesystemBackupStoreConfig =
         override.getData().getBackup().getFilesystem();
     filesystemBackupStoreConfig.setBasePath(filesystem.getBasePath());
 
     override.getData().getBackup().setFilesystem(filesystemBackupStoreConfig);
+  }
+
+  private void populateBackupScheduler(
+      final BrokerBasedProperties override, final PrimaryStorageBackup primaryStorageBackup) {
+    final BackupCfg backupCfg = override.getData().getBackup();
+    backupCfg.setRequired(primaryStorageBackup.isRequired());
+    backupCfg.setContinuous(primaryStorageBackup.isContinuous());
+    backupCfg.setSchedule(primaryStorageBackup.getSchedule());
+    backupCfg.setCheckpointInterval(primaryStorageBackup.getCheckpointInterval());
+    backupCfg.setOffset(primaryStorageBackup.getOffset());
+    backupCfg.setRetention(primaryStorageBackup.getRetention());
   }
 
   private void populateCamundaExporter(final BrokerBasedProperties override) {
@@ -671,8 +796,13 @@ public class BrokerBasedPropertiesOverride {
     setArg(args, "connect.url", database.getUrl());
     setArg(args, "connect.clusterName", database.getClusterName());
     setArg(args, "connect.dateFormat", database.getDateFormat());
-    setArg(args, "connect.socketTimeout", database.getSocketTimeout());
-    setArg(args, "connect.connectTimeout", database.getConnectionTimeout());
+    final var socketTimeout = database.getSocketTimeout();
+    setArg(args, "connect.socketTimeout", socketTimeout != null ? socketTimeout.toMillis() : null);
+    final var connectionTimeout = database.getConnectionTimeout();
+    setArg(
+        args,
+        "connect.connectTimeout",
+        connectionTimeout != null ? connectionTimeout.toMillis() : null);
 
     // Add security configuration mapping
     if (database.getSecurity() != null) {
@@ -734,6 +864,10 @@ public class BrokerBasedPropertiesOverride {
     setArg(
         args, "batchOperationCache.maxCacheSize", database.getBatchOperationCache().getMaxSize());
     setArg(args, "processCache.maxCacheSize", database.getProcessCache().getMaxSize());
+    setArg(
+        args,
+        "decisionRequirementsCache.maxCacheSize",
+        database.getDecisionRequirementsCache().getMaxSize());
     setArg(args, "formCache.maxCacheSize", database.getFormCache().getMaxSize());
 
     setArg(args, "postExport.batchSize", database.getPostExport().getBatchSize());
@@ -780,6 +914,7 @@ public class BrokerBasedPropertiesOverride {
     final Map<String, Object> args =
         exporter.getArgs() == null ? new LinkedHashMap<>() : exporter.getArgs();
     setArgIfNotNull(args, "queueSize", database.getQueueSize());
+    setArgIfNotNull(args, "queueMemoryLimit", database.getQueueMemoryLimit());
     setArgIfNotNull(args, "flushInterval", database.getFlushInterval());
 
     if (database.getHistory() != null) {

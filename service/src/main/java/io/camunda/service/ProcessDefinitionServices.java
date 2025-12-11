@@ -8,6 +8,7 @@
 package io.camunda.service;
 
 import static io.camunda.security.auth.Authorization.withAuthorization;
+import static io.camunda.service.authorization.Authorizations.MESSAGE_SUBSCRIPTION_READ_AUTHORIZATION;
 import static io.camunda.service.authorization.Authorizations.PROCESS_DEFINITION_READ_AUTHORIZATION;
 import static io.camunda.service.authorization.Authorizations.PROCESS_INSTANCE_READ_AUTHORIZATION;
 
@@ -16,11 +17,12 @@ import io.camunda.search.entities.FormEntity;
 import io.camunda.search.entities.ProcessDefinitionEntity;
 import io.camunda.search.entities.ProcessDefinitionInstanceStatisticsEntity;
 import io.camunda.search.entities.ProcessDefinitionInstanceVersionStatisticsEntity;
+import io.camunda.search.entities.ProcessDefinitionMessageSubscriptionStatisticsEntity;
 import io.camunda.search.entities.ProcessFlowNodeStatisticsEntity;
-import io.camunda.search.entities.ProcessInstanceEntity.ProcessInstanceState;
 import io.camunda.search.filter.ProcessDefinitionStatisticsFilter;
 import io.camunda.search.query.ProcessDefinitionInstanceStatisticsQuery;
 import io.camunda.search.query.ProcessDefinitionInstanceVersionStatisticsQuery;
+import io.camunda.search.query.ProcessDefinitionMessageSubscriptionStatisticsQuery;
 import io.camunda.search.query.ProcessDefinitionQuery;
 import io.camunda.search.query.SearchQueryResult;
 import io.camunda.security.auth.BrokerRequestAuthorizationConverter;
@@ -118,15 +120,13 @@ public class ProcessDefinitionServices
       searchProcessDefinitionInstanceVersionStatistics(
           final String processDefinitionId,
           final ProcessDefinitionInstanceVersionStatisticsQuery query) {
-
-    final var filter =
-        query.filter().toBuilder()
-            .processDefinitionIds(processDefinitionId)
-            .states(ProcessInstanceState.ACTIVE.name())
-            .build();
     final var updatedQuery =
         ProcessDefinitionInstanceVersionStatisticsQuery.of(
-            b -> b.filter(filter).sort(query.sort()).page(query.page()));
+            b ->
+                b.filter(
+                        query.filter().toBuilder().processDefinitionId(processDefinitionId).build())
+                    .sort(query.sort())
+                    .page(query.page()));
     return executeSearchRequest(
         () ->
             processDefinitionSearchClient
@@ -151,5 +151,17 @@ public class ProcessDefinitionServices
     return Optional.ofNullable(processDefinition)
         .map(ProcessDefinitionEntity::bpmnXml)
         .filter(xml -> !xml.isEmpty());
+  }
+
+  public SearchQueryResult<ProcessDefinitionMessageSubscriptionStatisticsEntity>
+      getProcessDefinitionMessageSubscriptionStatistics(
+          final ProcessDefinitionMessageSubscriptionStatisticsQuery query) {
+    return executeSearchRequest(
+        () ->
+            processDefinitionSearchClient
+                .withSecurityContext(
+                    securityContextProvider.provideSecurityContext(
+                        authentication, MESSAGE_SUBSCRIPTION_READ_AUTHORIZATION))
+                .getProcessDefinitionMessageSubscriptionStatistics(query));
   }
 }

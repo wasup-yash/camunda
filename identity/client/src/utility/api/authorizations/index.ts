@@ -60,6 +60,7 @@ export enum OwnerType {
 export enum ResourceType {
   AUTHORIZATION = "AUTHORIZATION",
   BATCH = "BATCH",
+  CLUSTER_VARIABLE = "CLUSTER_VARIABLE",
   COMPONENT = "COMPONENT",
   DECISION_DEFINITION = "DECISION_DEFINITION",
   DECISION_REQUIREMENTS_DEFINITION = "DECISION_REQUIREMENTS_DEFINITION",
@@ -95,11 +96,15 @@ export type TaskAuthorization = BaseAuthorization & {
 };
 
 export type GeneralAuthorization = BaseAuthorization & {
-  resourceType: Exclude<keyof typeof ResourceType, "USER_TASK">;
+  resourceType: Exclude<ResourceType, ResourceType.USER_TASK>;
   resourceId: string;
 };
 
 export type Authorization = TaskAuthorization | GeneralAuthorization;
+
+export type NewAuthorization =
+  | Omit<TaskAuthorization, "authorizationKey">
+  | Omit<GeneralAuthorization, "authorizationKey">;
 
 export enum PatchAuthorizationAction {
   ADD = "ADD",
@@ -117,10 +122,9 @@ export const searchAuthorization: ApiDefinition<
   searchAuthorizationsParams
 > = (param) => apiPost(`${AUTHORIZATIONS_ENDPOINT}/search`, param);
 
-export const createAuthorization: ApiDefinition<
-  undefined,
-  Omit<Authorization, "authorizationKey">
-> = (authorization) => apiPost(AUTHORIZATIONS_ENDPOINT, authorization);
+export const createAuthorization: ApiDefinition<undefined, NewAuthorization> = (
+  authorization,
+) => apiPost(AUTHORIZATIONS_ENDPOINT, authorization);
 
 export type DeleteAuthorizationParams = {
   authorizationKey: string;

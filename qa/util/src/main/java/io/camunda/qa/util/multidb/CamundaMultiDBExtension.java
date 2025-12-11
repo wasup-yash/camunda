@@ -36,6 +36,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import org.agrona.CloseHelper;
 import org.awaitility.Awaitility;
@@ -212,6 +213,11 @@ public class CamundaMultiDBExtension
       "test.integration.opensearch.aws.url";
   public static final String PROP_TEST_INTEGRATION_OPENSEARCH_AWS_TIMEOUT =
       "test.integration.opensearch.aws.timeout.seconds";
+  public static final String TEST_INTEGRATION_AURORA_AWS_URL = "test.integration.aurora.aws.url";
+  public static final String TEST_INTEGRATION_AURORA_AWS_USERNAME =
+      "test.integration.aurora.aws.username";
+  public static final String TEST_INTEGRATION_AURORA_AWS_PASSWORD =
+      "test.integration.aurora.aws.password";
   public static final Duration TIMEOUT_DATA_AVAILABILITY =
       Optional.ofNullable(System.getProperty(PROP_TEST_INTEGRATION_OPENSEARCH_AWS_TIMEOUT))
           .map(val -> Duration.ofSeconds(Long.parseLong(val)))
@@ -270,21 +276,24 @@ public class CamundaMultiDBExtension
     final var application = applicationUnderTest.application();
     multiDbConfigurator = new MultiDbConfigurator(application);
     application
-        .withBrokerConfig(cfg -> cfg.getData().setDirectory(DataCfg.DEFAULT_DIRECTORY))
-        .withBrokerConfig(cfg -> cfg.getGateway().setEnable(true))
+        .withUnifiedConfig(
+            cfg -> {
+              cfg.getData().getPrimaryStorage().setDirectory(DataCfg.DEFAULT_DIRECTORY);
+            })
         .withExporter(
             "recordingExporter", cfg -> cfg.setClassName(RecordingExporter.class.getName()));
   }
 
   @Override
   public void beforeAll(final ExtensionContext context) throws Exception {
-    LOGGER.info("Starting up Camunda instance, with {}", getDatabaseType(context));
+    final var databaseType = getDatabaseType(context);
+    LOGGER.info("Starting up Camunda instance, with {}", databaseType);
     final Class<?> testClass = context.getRequiredTestClass();
     final var isHistoryRelatedTest = testClass.isAnnotationPresent(HistoryMultiDbTest.class);
     testPrefix = testClass.getSimpleName().toLowerCase();
     RecordingExporter.reset();
     setupTestApplication(testClass);
-    switch (getDatabaseType(context)) {
+    switch (databaseType) {
       case LOCAL -> {
         final ElasticsearchContainer elasticsearchContainer = setupElasticsearch();
         final String elasticSearchUrl = "http://" + elasticsearchContainer.getHttpHostAddress();
@@ -310,7 +319,55 @@ public class CamundaMultiDBExtension
         final var expectedDescriptors = new IndexDescriptors(testPrefix, false).all();
         setupHelper = new ElasticOpenSearchSetupHelper(DEFAULT_OS_URL, expectedDescriptors);
       }
-      case RDBMS -> multiDbConfigurator.configureRDBMSSupport(isHistoryRelatedTest);
+      case RDBMS_H2 ->
+          multiDbConfigurator.configureRDBMSSupport(
+              isHistoryRelatedTest,
+              "jdbc:h2:mem:testdb+" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+              "sa",
+              "",
+              "org.h2.Driver");
+      case RDBMS_POSTGRES ->
+          multiDbConfigurator.configureRDBMSSupport(
+              isHistoryRelatedTest,
+              "jdbc:postgresql:camunda",
+              "camunda",
+              "camunda",
+              "org.postgresql.Driver");
+      case RDBMS_MARIADB ->
+          multiDbConfigurator.configureRDBMSSupport(
+              isHistoryRelatedTest,
+              "jdbc:mariadb://localhost:3306/camunda",
+              "camunda",
+              "camunda",
+              "org.mariadb.jdbc.Driver");
+      case RDBMS_MYSQL ->
+          multiDbConfigurator.configureRDBMSSupport(
+              isHistoryRelatedTest,
+              "jdbc:mysql://localhost:3306/camunda",
+              "camunda",
+              "camunda",
+              "com.mysql.cj.jdbc.Driver");
+      case RDBMS_ORACLE ->
+          multiDbConfigurator.configureRDBMSSupport(
+              isHistoryRelatedTest,
+              "jdbc:oracle:thin:@localhost:1521/FREEPDB1",
+              "camunda",
+              "camunda",
+              "oracle.jdbc.OracleDriver");
+      case RDBMS_MSSQL ->
+          multiDbConfigurator.configureRDBMSSupport(
+              isHistoryRelatedTest,
+              "jdbc:sqlserver://localhost:1433;Encrypt=false",
+              "sa",
+              "Camunda#8_demo",
+              "com.microsoft.sqlserver.jdbc.SQLServerDriver");
+      case RDBMS_AURORA ->
+          multiDbConfigurator.configureRDBMSSupport(
+              isHistoryRelatedTest,
+              System.getProperty(TEST_INTEGRATION_AURORA_AWS_URL),
+              System.getProperty(TEST_INTEGRATION_AURORA_AWS_USERNAME),
+              System.getProperty(TEST_INTEGRATION_AURORA_AWS_PASSWORD),
+              "software.amazon.jdbc.Driver");
       case AWS_OS -> {
         final var awsOSUrl = System.getProperty(TEST_INTEGRATION_OPENSEARCH_AWS_URL);
         multiDbConfigurator.configureAWSOpenSearchSupport(
@@ -318,7 +375,7 @@ public class CamundaMultiDBExtension
         final var expectedDescriptors = new IndexDescriptors(testPrefix, false).all();
         setupHelper = new AWSOpenSearchSetupHelper(awsOSUrl, expectedDescriptors);
       }
-      default -> throw new RuntimeException("Unknown exporter type");
+      default -> throw new RuntimeException("Database type not supported: " + databaseType);
     }
 
     // we need to close the test application before cleaning up
@@ -477,7 +534,7 @@ public class CamundaMultiDBExtension
     closeables.add(application);
     application.start();
     application.awaitCompleteTopology(
-        application.brokerConfig(), authenticatedClientFactory.getAdminCamundaClient());
+        application.unifiedConfig(), authenticatedClientFactory.getAdminCamundaClient());
 
     Awaitility.await("Await exporter readiness")
         .timeout(TIMEOUT_DATABASE_EXPORTER_READINESS)
@@ -668,7 +725,13 @@ public class CamundaMultiDBExtension
     LOCAL,
     ES,
     OS,
-    RDBMS,
+    RDBMS_H2,
+    RDBMS_MARIADB,
+    RDBMS_MSSQL,
+    RDBMS_MYSQL,
+    RDBMS_ORACLE,
+    RDBMS_POSTGRES,
+    RDBMS_AURORA,
     AWS_OS
   }
 }

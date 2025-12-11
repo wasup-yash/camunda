@@ -1,5 +1,85 @@
 # Changelog
 
+## v0.0.24
+
+### 🚀 Enhancements
+
+- update pd variable filter schema ([#42275](https://github.com/camunda/camunda/pull/42275))
+
+### ❤️ Contributors
+
+- Yuliia Saienko ([@juliasaienko](https://github.com/juliasaienko))
+
+## v0.0.23
+
+### 🚀 Enhancements
+
+- update pi variable filer schema ([#42253](https://github.com/camunda/camunda/pull/42253))
+
+### ❤️ Contributors
+
+- Yuliia Saienko ([@juliasaienko](https://github.com/juliasaienko))
+
+## v0.0.22
+
+### 🚀 Enhancements
+
+- support filtering BO items by operation type ([#42106](https://github.com/camunda/camunda/pull/42106))
+
+### ❤️ Contributors
+
+- Vinicius Goulart ([@vsgoulart](https://github.com/vsgoulart))
+
+## v0.0.21
+
+### 🚀 Enhancements
+
+- add processedDate to sortFields in queryBatchOperationItemsRequestBodySchema ([#42081](https://github.com/camunda/camunda/pull/42081))
+
+### ❤️ Contributors
+
+- Vinicius Goulart ([@vsgoulart](https://github.com/vsgoulart))
+
+## v0.0.20
+
+### 🚀 Enhancements
+
+- add Zod schemas for audit log entities and operations ([#41866](https://github.com/camunda/camunda/pull/41866))
+
+### ❤️ Contributors
+
+- Daniel Kelemen ([@danielkelemen](https://github.com/danielkelemen))
+
+## v0.0.19
+
+### 🩹 Fixes
+
+- always send truncateValues when defineds ([#41390](https://github.com/camunda/camunda/pull/41390))
+
+### ❤️ Contributors
+
+- Vinicius Goulart ([@vsgoulart](https://github.com/vsgoulart))
+
+## v0.0.18
+
+### 🚀 Enhancements
+
+- add full variable config to fetch variables typedefs ([#41390](https://github.com/camunda/camunda/pull/41390))
+
+### ❤️ Contributors
+
+- Vinicius Goulart ([@vsgoulart](https://github.com/vsgoulart))
+
+## v0.0.17
+
+### 🚀 Enhancements
+
+- add process instance incident resolution to zod schema ([#41107](https://github.com/camunda/camunda/pull/41107))
+
+### ❤️ Contributors
+
+- Patrick Dehn ([@pedesen](https://github.com/pedesen))
+
 ## v0.0.16
 
 ### 🚀 Enhancements

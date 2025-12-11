@@ -400,6 +400,21 @@ public class SearchRequestSortMapper {
         .collect(Collectors.toList());
   }
 
+  public static List<ClusterVariableSearchQuerySortRequest> toClusterVariableSearchQuerySortRequest(
+      final List<SearchRequestSort> requests) {
+    return requests.stream()
+        .map(
+            r -> {
+              final ClusterVariableSearchQuerySortRequest request =
+                  new ClusterVariableSearchQuerySortRequest();
+              request.setField(
+                  ClusterVariableSearchQuerySortRequest.FieldEnum.fromValue(r.getField()));
+              request.setOrder(r.getOrder());
+              return request;
+            })
+        .collect(Collectors.toList());
+  }
+
   public static List<UserSearchQuerySortRequest> toUserSearchQuerySortRequest(
       final List<SearchRequestSort> requests) {
     return requests.stream()
@@ -559,6 +574,26 @@ public class SearchRequestSortMapper {
 
   public static List<SearchRequestSort> fromCorrelatedMessageSubscriptionSearchQuerySortRequest(
       final List<CorrelatedMessageSubscriptionSearchQuerySortRequest> requests) {
+    return requests.stream()
+        .map(r -> createFrom(r.getField(), r.getOrder()))
+        .collect(Collectors.toList());
+  }
+
+  public static List<AuditLogSearchQuerySortRequest> toAuditLogSearchQuerySortRequest(
+      final List<SearchRequestSort> requests) {
+    return requests.stream()
+        .map(
+            r -> {
+              final AuditLogSearchQuerySortRequest request = new AuditLogSearchQuerySortRequest();
+              request.setField(AuditLogSearchQuerySortRequest.FieldEnum.fromValue(r.getField()));
+              request.setOrder(r.getOrder());
+              return request;
+            })
+        .collect(Collectors.toList());
+  }
+
+  public static List<SearchRequestSort> fromAuditLogSearchQuerySortRequest(
+      final List<AuditLogSearchQuerySortRequest> requests) {
     return requests.stream()
         .map(r -> createFrom(r.getField(), r.getOrder()))
         .collect(Collectors.toList());

@@ -15,8 +15,6 @@ import {
 import {IncidentsWrapper} from '../index';
 import {firstIncident, mockIncidents, secondIncident, Wrapper} from './mocks';
 import {mockFetchProcessDefinitionXml} from 'modules/mocks/api/v2/processDefinitions/fetchProcessDefinitionXml';
-import {createInstance} from 'modules/testUtils';
-import {mockFetchProcessInstance} from 'modules/mocks/api/processInstances/fetchProcessInstance';
 import {mockFetchProcessInstance as mockFetchProcessInstanceV2} from 'modules/mocks/api/v2/processInstances/fetchProcessInstance';
 import {mockProcessInstance} from 'modules/mocks/api/v2/mocks/processInstance';
 import {mockSearchIncidentsByProcessInstance} from 'modules/mocks/api/v2/incidents/searchIncidentsByProcessInstance';
@@ -28,7 +26,6 @@ import {mockSearchIncidentsByElementInstance} from 'modules/mocks/api/v2/inciden
 describe('IncidentsWrapper', () => {
   beforeEach(() => {
     mockFetchProcessDefinitionXml().withSuccess('');
-    mockFetchProcessInstance().withSuccess(createInstance());
     mockFetchProcessInstanceV2().withSuccess(mockProcessInstance);
     mockSearchProcessInstances().withSuccess({
       page: {totalItems: 1},
@@ -169,6 +166,40 @@ describe('IncidentsWrapper', () => {
     ).toBeInTheDocument();
     expect(
       table.getByText(getIncidentErrorName(secondIncident.errorType)),
+    ).toBeInTheDocument();
+
+    unmount(); // Unmount avoids React reacting to the global state cleanup
+    incidentsPanelStore.clearSelection();
+  });
+
+  it('should render incidents filtered for an elementId when scoped to it', async () => {
+    mockSearchIncidentsByProcessInstance(':instanceId').withSuccess({
+      page: {totalItems: 1},
+      items: [firstIncident],
+    });
+
+    incidentsPanelStore.showIncidentsForElementId(firstIncident.elementId);
+    incidentsPanelStore.setPanelOpen(true);
+    const {unmount} = render(
+      <IncidentsWrapper
+        processInstance={mockProcessInstance}
+        setIsInTransition={vi.fn()}
+      />,
+      {wrapper: Wrapper},
+    );
+
+    await waitForElementToBeRemoved(() =>
+      screen.queryByTestId('data-table-skeleton'),
+    );
+    const table = within(screen.getByRole('table'));
+
+    expect(
+      screen.getByText(
+        `Incidents - Filtered by "${firstIncident.elementId}" - 1 result`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      table.getByText(getIncidentErrorName(firstIncident.errorType)),
     ).toBeInTheDocument();
 
     unmount(); // Unmount avoids React reacting to the global state cleanup

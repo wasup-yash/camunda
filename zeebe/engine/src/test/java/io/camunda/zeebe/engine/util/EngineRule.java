@@ -30,9 +30,11 @@ import io.camunda.zeebe.engine.util.client.AuthorizationClient;
 import io.camunda.zeebe.engine.util.client.BatchOperationClient;
 import io.camunda.zeebe.engine.util.client.ClockClient;
 import io.camunda.zeebe.engine.util.client.ClusterVariableClient;
+import io.camunda.zeebe.engine.util.client.ConditionalEvaluationClient;
 import io.camunda.zeebe.engine.util.client.DecisionEvaluationClient;
 import io.camunda.zeebe.engine.util.client.DeploymentClient;
 import io.camunda.zeebe.engine.util.client.GroupClient;
+import io.camunda.zeebe.engine.util.client.HistoryDeletionClient;
 import io.camunda.zeebe.engine.util.client.IdentitySetupClient;
 import io.camunda.zeebe.engine.util.client.IncidentClient;
 import io.camunda.zeebe.engine.util.client.JobActivationClient;
@@ -520,6 +522,10 @@ public final class EngineRule extends ExternalResource {
     return new SignalClient(environmentRule);
   }
 
+  public ConditionalEvaluationClient conditionalEvaluation() {
+    return new ConditionalEvaluationClient(environmentRule);
+  }
+
   public UserTaskClient userTask() {
     return new UserTaskClient(environmentRule);
   }
@@ -724,6 +730,10 @@ public final class EngineRule extends ExternalResource {
 
   public ScaleClient scale() {
     return new ScaleClient(environmentRule);
+  }
+
+  public HistoryDeletionClient historyDeletion() {
+    return new HistoryDeletionClient(environmentRule);
   }
 
   public ActorScheduler actorScheduler() {

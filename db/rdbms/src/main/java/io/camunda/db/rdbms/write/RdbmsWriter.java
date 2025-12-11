@@ -9,7 +9,9 @@ package io.camunda.db.rdbms.write;
 
 import io.camunda.db.rdbms.config.VendorDatabaseProperties;
 import io.camunda.db.rdbms.read.service.BatchOperationDbReader;
+import io.camunda.db.rdbms.sql.AuditLogMapper;
 import io.camunda.db.rdbms.sql.BatchOperationMapper;
+import io.camunda.db.rdbms.sql.ClusterVariableMapper;
 import io.camunda.db.rdbms.sql.CorrelatedMessageSubscriptionMapper;
 import io.camunda.db.rdbms.sql.DecisionInstanceMapper;
 import io.camunda.db.rdbms.sql.FlowNodeInstanceMapper;
@@ -24,8 +26,10 @@ import io.camunda.db.rdbms.sql.UsageMetricTUMapper;
 import io.camunda.db.rdbms.sql.UserTaskMapper;
 import io.camunda.db.rdbms.sql.VariableMapper;
 import io.camunda.db.rdbms.write.queue.ExecutionQueue;
+import io.camunda.db.rdbms.write.service.AuditLogWriter;
 import io.camunda.db.rdbms.write.service.AuthorizationWriter;
 import io.camunda.db.rdbms.write.service.BatchOperationWriter;
+import io.camunda.db.rdbms.write.service.ClusterVariableWriter;
 import io.camunda.db.rdbms.write.service.CorrelatedMessageSubscriptionWriter;
 import io.camunda.db.rdbms.write.service.DecisionDefinitionWriter;
 import io.camunda.db.rdbms.write.service.DecisionInstanceWriter;
@@ -55,6 +59,7 @@ public class RdbmsWriter {
 
   private final RdbmsPurger rdbmsPurger;
   private final ExecutionQueue executionQueue;
+  private final AuditLogWriter auditLogWriter;
   private final AuthorizationWriter authorizationWriter;
   private final DecisionDefinitionWriter decisionDefinitionWriter;
   private final DecisionInstanceWriter decisionInstanceWriter;
@@ -67,6 +72,7 @@ public class RdbmsWriter {
   private final ProcessInstanceWriter processInstanceWriter;
   private final TenantWriter tenantWriter;
   private final VariableWriter variableWriter;
+  private final ClusterVariableWriter clusterVariableWriter;
   private final RoleWriter roleWriter;
   private final UserWriter userWriter;
   private final UserTaskWriter userTaskWriter;
@@ -81,12 +87,14 @@ public class RdbmsWriter {
   private final CorrelatedMessageSubscriptionWriter correlatedMessageSubscriptionWriter;
 
   private final HistoryCleanupService historyCleanupService;
+  private final RdbmsWriterMetrics metrics;
 
   public RdbmsWriter(
       final RdbmsWriterConfig config,
       final ExecutionQueue executionQueue,
       final ExporterPositionService exporterPositionService,
       final RdbmsWriterMetrics metrics,
+      final AuditLogMapper auditLogMapper,
       final DecisionInstanceMapper decisionInstanceMapper,
       final FlowNodeInstanceMapper flowNodeInstanceMapper,
       final IncidentMapper incidentMapper,
@@ -102,15 +110,18 @@ public class RdbmsWriter {
       final UsageMetricTUMapper usageMetricTUMapper,
       final BatchOperationMapper batchOperationMapper,
       final MessageSubscriptionMapper messageSubscriptionMapper,
-      final CorrelatedMessageSubscriptionMapper correlatedMessageSubscriptionMapper) {
+      final CorrelatedMessageSubscriptionMapper correlatedMessageSubscriptionMapper,
+      final ClusterVariableMapper clusterVariableMapper) {
     this.executionQueue = executionQueue;
     this.exporterPositionService = exporterPositionService;
+    this.metrics = metrics;
     rdbmsPurger = new RdbmsPurger(purgeMapper, vendorDatabaseProperties);
+    auditLogWriter = new AuditLogWriter(executionQueue, auditLogMapper, vendorDatabaseProperties);
     authorizationWriter = new AuthorizationWriter(executionQueue);
     decisionDefinitionWriter = new DecisionDefinitionWriter(executionQueue);
     decisionInstanceWriter =
         new DecisionInstanceWriter(
-            decisionInstanceMapper, executionQueue, vendorDatabaseProperties);
+            decisionInstanceMapper, executionQueue, vendorDatabaseProperties, config);
     decisionRequirementsWriter = new DecisionRequirementsWriter(executionQueue);
     flowNodeInstanceWriter = new FlowNodeInstanceWriter(executionQueue, flowNodeInstanceMapper);
     groupWriter = new GroupWriter(executionQueue);
@@ -140,6 +151,7 @@ public class RdbmsWriter {
     correlatedMessageSubscriptionWriter =
         new CorrelatedMessageSubscriptionWriter(
             executionQueue, correlatedMessageSubscriptionMapper);
+    clusterVariableWriter = new ClusterVariableWriter(executionQueue, vendorDatabaseProperties);
 
     historyCleanupService =
         new HistoryCleanupService(
@@ -162,6 +174,10 @@ public class RdbmsWriter {
 
   public AuthorizationWriter getAuthorizationWriter() {
     return authorizationWriter;
+  }
+
+  public AuditLogWriter getAuditLogWriter() {
+    return auditLogWriter;
   }
 
   public DecisionDefinitionWriter getDecisionDefinitionWriter() {
@@ -202,6 +218,10 @@ public class RdbmsWriter {
 
   public VariableWriter getVariableWriter() {
     return variableWriter;
+  }
+
+  public ClusterVariableWriter getClusterVariableWriter() {
+    return clusterVariableWriter;
   }
 
   public RoleWriter getRoleWriter() {
@@ -268,7 +288,25 @@ public class RdbmsWriter {
     return executionQueue;
   }
 
+  public RdbmsWriterMetrics getMetrics() {
+    return metrics;
+  }
+
   public void flush() {
-    executionQueue.flush();
+    flush(true);
+  }
+
+  /**
+   * Flushes the execution queue based on the force parameter.
+   *
+   * @param force if true, forces an immediate flush; if false, only flushes if queue limits are
+   *     reached
+   */
+  public void flush(final boolean force) {
+    if (force) {
+      executionQueue.flush();
+    } else {
+      executionQueue.checkQueueForFlush();
+    }
   }
 }

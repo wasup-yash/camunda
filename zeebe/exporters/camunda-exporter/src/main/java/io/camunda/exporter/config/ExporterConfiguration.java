@@ -19,6 +19,7 @@ public class ExporterConfiguration {
   private HistoryConfiguration history = new HistoryConfiguration();
   private CacheConfiguration batchOperationCache = new CacheConfiguration();
   private CacheConfiguration processCache = new CacheConfiguration();
+  private CacheConfiguration decisionRequirementsCache = new CacheConfiguration();
   private CacheConfiguration formCache = new CacheConfiguration();
   private PostExportConfiguration postExport = new PostExportConfiguration();
   private IncidentNotifierConfiguration notifier = new IncidentNotifierConfiguration();
@@ -63,6 +64,14 @@ public class ExporterConfiguration {
 
   public void setProcessCache(final CacheConfiguration processCache) {
     this.processCache = processCache;
+  }
+
+  public CacheConfiguration getDecisionRequirementsCache() {
+    return decisionRequirementsCache;
+  }
+
+  public void setDecisionRequirementsCache(final CacheConfiguration decisionRequirementsCache) {
+    this.decisionRequirementsCache = decisionRequirementsCache;
   }
 
   public CacheConfiguration getFormCache() {
@@ -130,6 +139,8 @@ public class ExporterConfiguration {
         + batchOperationCache
         + ", processCache="
         + processCache
+        + ", decisionRequirementsCache="
+        + decisionRequirementsCache
         + ", formCache="
         + formCache
         + ", postExport="
@@ -141,7 +152,7 @@ public class ExporterConfiguration {
 
   public static class BulkConfiguration {
     // delay before forced flush
-    private int delay = 5;
+    private int delay = 1;
     // bulk size before flush
     private int size = 1_000;
     // bulk memory utilisation before flush (in Mb)
@@ -327,7 +338,7 @@ public class ExporterConfiguration {
   public static final class PostExportConfiguration {
     private int batchSize = 100;
     private int delayBetweenRuns = 2000;
-    private int maxDelayBetweenRuns = 60000;
+    private int maxDelayBetweenRuns = 5000;
     private boolean ignoreMissingData = false;
 
     public int getBatchSize() {

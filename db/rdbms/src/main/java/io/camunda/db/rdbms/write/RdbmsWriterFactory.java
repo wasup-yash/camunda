@@ -9,7 +9,9 @@ package io.camunda.db.rdbms.write;
 
 import io.camunda.db.rdbms.config.VendorDatabaseProperties;
 import io.camunda.db.rdbms.read.service.BatchOperationDbReader;
+import io.camunda.db.rdbms.sql.AuditLogMapper;
 import io.camunda.db.rdbms.sql.BatchOperationMapper;
+import io.camunda.db.rdbms.sql.ClusterVariableMapper;
 import io.camunda.db.rdbms.sql.CorrelatedMessageSubscriptionMapper;
 import io.camunda.db.rdbms.sql.DecisionInstanceMapper;
 import io.camunda.db.rdbms.sql.ExporterPositionMapper;
@@ -33,6 +35,7 @@ public class RdbmsWriterFactory {
   private final SqlSessionFactory sqlSessionFactory;
   private final ExporterPositionMapper exporterPositionMapper;
   private final VendorDatabaseProperties vendorDatabaseProperties;
+  private final AuditLogMapper auditLogMapper;
   private final DecisionInstanceMapper decisionInstanceMapper;
   private final FlowNodeInstanceMapper flowNodeInstanceMapper;
   private final IncidentMapper incidentMapper;
@@ -49,11 +52,13 @@ public class RdbmsWriterFactory {
   private final BatchOperationMapper batchOperationMapper;
   private final MessageSubscriptionMapper messageSubscriptionMapper;
   private final CorrelatedMessageSubscriptionMapper correlatedMessageSubscriptionMapper;
+  private final ClusterVariableMapper clusterVariableMapper;
 
   public RdbmsWriterFactory(
       final SqlSessionFactory sqlSessionFactory,
       final ExporterPositionMapper exporterPositionMapper,
       final VendorDatabaseProperties vendorDatabaseProperties,
+      final AuditLogMapper auditLogMapper,
       final DecisionInstanceMapper decisionInstanceMapper,
       final FlowNodeInstanceMapper flowNodeInstanceMapper,
       final IncidentMapper incidentMapper,
@@ -69,10 +74,12 @@ public class RdbmsWriterFactory {
       final UsageMetricTUMapper usageMetricTUMapper,
       final BatchOperationMapper batchOperationMapper,
       final MessageSubscriptionMapper messageSubscriptionMapper,
-      final CorrelatedMessageSubscriptionMapper correlatedMessageSubscriptionMapper) {
+      final CorrelatedMessageSubscriptionMapper correlatedMessageSubscriptionMapper,
+      final ClusterVariableMapper clusterVariableMapper) {
     this.sqlSessionFactory = sqlSessionFactory;
     this.exporterPositionMapper = exporterPositionMapper;
     this.vendorDatabaseProperties = vendorDatabaseProperties;
+    this.auditLogMapper = auditLogMapper;
     this.decisionInstanceMapper = decisionInstanceMapper;
     this.flowNodeInstanceMapper = flowNodeInstanceMapper;
     this.incidentMapper = incidentMapper;
@@ -89,17 +96,23 @@ public class RdbmsWriterFactory {
     this.batchOperationMapper = batchOperationMapper;
     this.messageSubscriptionMapper = messageSubscriptionMapper;
     this.correlatedMessageSubscriptionMapper = correlatedMessageSubscriptionMapper;
+    this.clusterVariableMapper = clusterVariableMapper;
   }
 
   public RdbmsWriter createWriter(final RdbmsWriterConfig config) {
     final var executionQueue =
         new DefaultExecutionQueue(
-            sqlSessionFactory, config.partitionId(), config.queueSize(), metrics);
+            sqlSessionFactory,
+            config.partitionId(),
+            config.queueSize(),
+            config.queueMemoryLimit(),
+            metrics);
     return new RdbmsWriter(
         config,
         executionQueue,
         new ExporterPositionService(executionQueue, exporterPositionMapper),
         metrics,
+        auditLogMapper,
         decisionInstanceMapper,
         flowNodeInstanceMapper,
         incidentMapper,
@@ -115,6 +128,7 @@ public class RdbmsWriterFactory {
         usageMetricTUMapper,
         batchOperationMapper,
         messageSubscriptionMapper,
-        correlatedMessageSubscriptionMapper);
+        correlatedMessageSubscriptionMapper,
+        clusterVariableMapper);
   }
 }

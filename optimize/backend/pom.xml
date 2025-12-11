@@ -325,7 +325,7 @@
     <dependency>
       <groupId>com.github.wnameless.json</groupId>
       <artifactId>json-flattener</artifactId>
-      <version>0.17.2</version>
+      <version>0.18.0</version>
     </dependency>
 
     <dependency>
@@ -625,7 +625,6 @@
     <dependency>
       <groupId>com.github.wnameless.json</groupId>
       <artifactId>json-base</artifactId>
-      <version>2.5.0</version>
     </dependency>
 
     <dependency>
@@ -637,13 +636,13 @@
     <dependency>
       <groupId>org.camunda.bpm.model</groupId>
       <artifactId>camunda-xml-model</artifactId>
-      <version>${camunda.maven.artifacts.version}</version>
+      <version>${version.camunda}</version>
     </dependency>
 
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-client</artifactId>
-      <version>3.1.9</version>
+      <version>3.1.10</version>
       <scope>test</scope>
     </dependency>
 
@@ -670,13 +669,6 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>${version.httpclient}</version>
-    </dependency>
-
-    <!-- scope here is wider than test. Dependency:analyze error suppressed -->
-    <dependency>
-      <groupId>org.apache.tika</groupId>
-      <artifactId>tika-core</artifactId>
-      <version>3.2.1</version>
     </dependency>
 
     <!-- this is necessary. Dependency:analyze error suppressed -->
