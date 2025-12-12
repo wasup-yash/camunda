@@ -411,8 +411,7 @@ jobs:
           --namespace ${{ env.NAMESPACE }}
           --reuse-values
           --render-subchart-notes
-          --set global.image.registry=registry.camunda.cloud
-          --set global.image.repository=team-zeebe
+          --set global.image.repository=registry.camunda.cloud/team-zeebe
           --set global.image.tag=${{ needs.calculate-image-tag.outputs.image-tag }}
           ${{ steps.find-chart-release.outputs.chart-release != '' && format('--version {0}', steps.find-chart-release.outputs.chart-release) || '' }}
           ${{ inputs.realistic && '-f https://raw.githubusercontent.com/camunda/camunda-load-tests-helm/refs/heads/main/charts/camunda-load-tests/values-realistic-benchmark.yaml' || '' }}
