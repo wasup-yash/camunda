@@ -64,7 +64,8 @@ public class ModesAndProfilesProcessor implements SpringApplicationRunListener {
     System.out.println("Using mode: " + getMode().toUpperCase());
 
     if (isInsecure()) {
-      setProperty("zeebe.broker.gateway.security.enabled", "false", true);
+      setProperty("zeebe.broker.gateway.security.enabled", "false", true); // embedded gateway
+      setProperty("zeebe.gateway.security.enabled", "false", true); // dedicated gateway
       setProperty("camunda.security.authentication.unprotected-api", "true", true);
       setProperty("camunda.security.authentication.authorizations.enabled", "false", true);
     }
@@ -143,7 +144,14 @@ public class ModesAndProfilesProcessor implements SpringApplicationRunListener {
 
   private void configureProfilesForBrokerMode() {
     final Set<String> profiles =
-        new HashSet<>(Set.of(Profile.BROKER.getId(), Profile.STANDALONE.getId()));
+        new HashSet<>(
+            Set.of(
+                Profile.BROKER.getId(),
+                Profile.STANDALONE.getId()));
+
+    if (isDevelopment()) {
+      profiles.add(Profile.DEVELOPMENT.getId());
+    }
 
     environment.setActiveProfiles(profiles.toArray(new String[0]));
   }
@@ -156,6 +164,10 @@ public class ModesAndProfilesProcessor implements SpringApplicationRunListener {
                 Profile.OPERATE.getId(),
                 Profile.IDENTITY.getId(),
                 Profile.TASKLIST.getId()));
+
+    if (isDevelopment()) {
+      profiles.add(Profile.DEVELOPMENT.getId());
+    }
 
     environment.setActiveProfiles(profiles.toArray(new String[0]));
   }
