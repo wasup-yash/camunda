@@ -1578,6 +1578,7 @@ final class JsonSerializableToJsonTest {
               final long processInstanceKey = 2;
               final long processDefinitionKey = 4;
               final String bpmnProcessId = "process";
+              final long rootProcessInstanceKey = 5;
 
               return new VariableRecord()
                   .setName(wrapString(name))
@@ -1585,7 +1586,8 @@ final class JsonSerializableToJsonTest {
                   .setScopeKey(scopeKey)
                   .setProcessInstanceKey(processInstanceKey)
                   .setProcessDefinitionKey(processDefinitionKey)
-                  .setBpmnProcessId(wrapString(bpmnProcessId));
+                  .setBpmnProcessId(wrapString(bpmnProcessId))
+                  .setRootProcessInstanceKey(rootProcessInstanceKey);
             },
         """
                 {
@@ -1595,7 +1597,8 @@ final class JsonSerializableToJsonTest {
                   "bpmnProcessId": "process",
                   "name": "x",
                   "value": "1",
-                  "tenantId": "<default>"
+                  "tenantId": "<default>",
+                  "rootProcessInstanceKey": 5
                 }
                 """
       },
@@ -1611,6 +1614,7 @@ final class JsonSerializableToJsonTest {
               final long processInstanceKey = 2;
               final long processDefinitionKey = 4;
               final String bpmnProcessId = "process";
+              final long rootProcessInstanceKey = 5;
 
               return new VariableRecord()
                   .setName(wrapString(name))
@@ -1619,7 +1623,8 @@ final class JsonSerializableToJsonTest {
                   .setProcessInstanceKey(processInstanceKey)
                   .setProcessDefinitionKey(processDefinitionKey)
                   .setBpmnProcessId(wrapString(bpmnProcessId))
-                  .setTenantId("tenant-test");
+                  .setTenantId("tenant-test")
+                  .setRootProcessInstanceKey(rootProcessInstanceKey);
             },
         """
                 {
@@ -1629,7 +1634,8 @@ final class JsonSerializableToJsonTest {
                   "bpmnProcessId": "process",
                   "name": "x",
                   "value": "1",
-                  "tenantId": "tenant-test"
+                  "tenantId": "tenant-test",
+                  "rootProcessInstanceKey": 5
                 }
                 """
       },

@@ -1284,6 +1284,7 @@ public final class ProcessInstanceModificationModifyProcessor
                     scopeKey,
                     process.getKey(),
                     processInstance.getKey(),
+                    processInstance.getValue().getRootProcessInstanceKey(),
                     process.getBpmnProcessId(),
                     process.getTenantId(),
                     variableDocument));

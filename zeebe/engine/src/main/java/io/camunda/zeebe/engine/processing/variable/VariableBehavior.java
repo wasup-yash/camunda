@@ -61,6 +61,7 @@ public final class VariableBehavior {
       final long scopeKey,
       final long processDefinitionKey,
       final long processInstanceKey,
+      final long rootProcessInstanceKey,
       final DirectBuffer bpmnProcessId,
       final String tenantId,
       final DirectBuffer document) {
@@ -73,6 +74,7 @@ public final class VariableBehavior {
         .setScopeKey(scopeKey)
         .setProcessDefinitionKey(processDefinitionKey)
         .setProcessInstanceKey(processInstanceKey)
+        .setRootProcessInstanceKey(rootProcessInstanceKey)
         .setBpmnProcessId(bpmnProcessId)
         .setTenantId(tenantId);
     for (final DocumentEntry entry : indexedDocument) {
@@ -100,12 +102,14 @@ public final class VariableBehavior {
    * @param scopeKey the scope key for each variable
    * @param processDefinitionKey the process key to be associated with each variable
    * @param processInstanceKey the process instance key to be associated with each variable
+   * @param rootProcessInstanceKey the root process instance key to be associated with each variable
    * @param document the document to merge
    */
   public void mergeDocument(
       final long scopeKey,
       final long processDefinitionKey,
       final long processInstanceKey,
+      final long rootProcessInstanceKey,
       final DirectBuffer bpmnProcessId,
       final String tenantId,
       final DirectBuffer document) {
@@ -120,6 +124,7 @@ public final class VariableBehavior {
     variableRecord
         .setProcessDefinitionKey(processDefinitionKey)
         .setProcessInstanceKey(processInstanceKey)
+        .setRootProcessInstanceKey(rootProcessInstanceKey)
         .setBpmnProcessId(bpmnProcessId)
         .setTenantId(tenantId);
     while ((parentScope = variableState.getParentScopeKey(currentScope)) > 0) {
@@ -169,6 +174,7 @@ public final class VariableBehavior {
       final long scopeKey,
       final long processDefinitionKey,
       final long processInstanceKey,
+      final long rootProcessInstanceKey,
       final DirectBuffer bpmnProcessId,
       final String tenantId,
       final DirectBuffer name,
@@ -180,6 +186,7 @@ public final class VariableBehavior {
         .setScopeKey(scopeKey)
         .setProcessDefinitionKey(processDefinitionKey)
         .setProcessInstanceKey(processInstanceKey)
+        .setRootProcessInstanceKey(rootProcessInstanceKey)
         .setBpmnProcessId(bpmnProcessId)
         .setTenantId(tenantId)
         .setName(name)

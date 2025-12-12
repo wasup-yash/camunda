@@ -646,7 +646,7 @@ final class BulkIndexRequestTest {
     @ParameterizedTest
     @EnumSource(
         value = ValueType.class,
-        names = {"DECISION_EVALUATION", "JOB", "PROCESS_INSTANCE", "USER_TASK"})
+        names = {"DECISION_EVALUATION", "JOB", "PROCESS_INSTANCE", "USER_TASK", "VARIABLE"})
     void shouldIndexWithoutRootProcessInstanceKeyOnPreviousVersion(final ValueType valueType)
         throws Exception {
       // given
@@ -675,7 +675,7 @@ final class BulkIndexRequestTest {
     @ParameterizedTest
     @EnumSource(
         value = ValueType.class,
-        names = {"DECISION_EVALUATION", "JOB", "PROCESS_INSTANCE", "USER_TASK"})
+        names = {"DECISION_EVALUATION", "JOB", "PROCESS_INSTANCE", "USER_TASK", "VARIABLE"})
     void shouldIndexWithRootProcessInstanceKey(final ValueType valueType) throws Exception {
       // given
       final var record =
