@@ -413,6 +413,7 @@ jobs:
           --render-subchart-notes
           --set global.image.repository=registry.camunda.cloud/team-zeebe
           --set global.image.tag=${{ needs.calculate-image-tag.outputs.image-tag }}
+          --set global.image.pullSecrets[0].name=harbor-registry
           ${{ steps.find-chart-release.outputs.chart-release != '' && format('--version {0}', steps.find-chart-release.outputs.chart-release) || '' }}
           ${{ inputs.realistic && '-f https://raw.githubusercontent.com/camunda/camunda-load-tests-helm/refs/heads/main/charts/camunda-load-tests/values-realistic-benchmark.yaml' || '' }}
           ${{ inputs.load-test-load }}
