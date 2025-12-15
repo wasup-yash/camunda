@@ -7,122 +7,74 @@
  */
 package io.camunda.zeebe.gateway.rest.controller;
 
-import io.atomix.utils.net.Address;
-import io.camunda.zeebe.broker.client.api.BrokerClient;
-import io.camunda.zeebe.broker.client.api.BrokerClusterState;
+import io.camunda.service.TopologyServices;
+import io.camunda.service.TopologyServices.Broker;
+import io.camunda.service.TopologyServices.Partition;
+import io.camunda.util.EnumUtil;
 import io.camunda.zeebe.gateway.protocol.rest.BrokerInfo;
-import io.camunda.zeebe.gateway.protocol.rest.Partition;
 import io.camunda.zeebe.gateway.protocol.rest.Partition.HealthEnum;
 import io.camunda.zeebe.gateway.protocol.rest.Partition.RoleEnum;
 import io.camunda.zeebe.gateway.protocol.rest.TopologyResponse;
-import io.camunda.zeebe.gateway.rest.Loggers;
 import io.camunda.zeebe.gateway.rest.annotation.CamundaGetMapping;
 import io.camunda.zeebe.gateway.rest.util.KeyUtil;
-import io.camunda.zeebe.util.VersionUtil;
-import java.util.Set;
+import java.util.List;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @CamundaRestController
 @RequestMapping(path = {"/v1", "/v2"})
 public final class TopologyController {
 
-  private final BrokerClient client;
+  private final TopologyServices topologyServices;
 
-  public TopologyController(final BrokerClient client) {
-    this.client = client;
+  public TopologyController(final TopologyServices topologyServices) {
+    this.topologyServices = topologyServices;
   }
 
   @CamundaGetMapping(path = "/topology")
   public TopologyResponse get() {
 
+    final var topology = topologyServices.getTopology();
+
     final var response = new TopologyResponse();
-    final BrokerClusterState topology = client.getTopologyManager().getTopology();
+    response
+        .clusterId(topology.clusterId())
+        .clusterSize(topology.clusterSize())
+        .gatewayVersion(topology.gatewayVersion())
+        .partitionsCount(topology.partitionsCount())
+        .replicationFactor(topology.replicationFactor())
+        .lastCompletedChangeId(KeyUtil.keyToString(topology.lastCompletedChangeId()));
 
-    final String gatewayVersion = VersionUtil.getVersion();
-    if (gatewayVersion != null && !gatewayVersion.isBlank()) {
-      response.gatewayVersion(gatewayVersion);
-    }
+    topology
+        .brokers()
+        .forEach(
+            broker -> {
+              final var brokerInfo = new BrokerInfo();
+              addBrokerInfo(brokerInfo, broker);
+              addPartitionInfoToBrokerInfo(brokerInfo, broker.partitions());
 
-    if (topology != null) {
-      response
-          .clusterId(topology.getClusterId())
-          .clusterSize(topology.getClusterSize())
-          .partitionsCount(topology.getPartitionsCount())
-          .replicationFactor(topology.getReplicationFactor())
-          .lastCompletedChangeId(KeyUtil.keyToString(topology.getLastCompletedChangeId()));
-
-      topology
-          .getBrokers()
-          .forEach(
-              brokerId -> {
-                final BrokerInfo brokerInfo = new BrokerInfo();
-                addBrokerInfo(brokerInfo, brokerId, topology);
-                addPartitionInfoToBrokerInfo(brokerInfo, brokerId, topology);
-
-                response.addBrokersItem(brokerInfo);
-              });
-    }
+              response.addBrokersItem(brokerInfo);
+            });
 
     return response;
   }
 
-  private void addBrokerInfo(
-      final BrokerInfo brokerInfo, final Integer brokerId, final BrokerClusterState topology) {
-    final String brokerAddress = topology.getBrokerAddress(brokerId);
-    final Address address = Address.from(brokerAddress);
-
-    brokerInfo.setNodeId(brokerId);
-    brokerInfo.setHost(address.host());
-    brokerInfo.setPort(address.port());
-    brokerInfo.setVersion(topology.getBrokerVersion(brokerId));
+  private void addBrokerInfo(final BrokerInfo brokerInfo, final Broker broker) {
+    brokerInfo.setNodeId(broker.nodeId());
+    brokerInfo.setHost(broker.host());
+    brokerInfo.setPort(broker.port());
+    brokerInfo.setVersion(broker.version());
   }
 
   private void addPartitionInfoToBrokerInfo(
-      final BrokerInfo brokerInfo, final Integer brokerId, final BrokerClusterState topology) {
-    topology
-        .getPartitions()
-        .forEach(
-            partitionId -> {
-              final Partition partition = new Partition();
+      final BrokerInfo brokerInfo, final List<Partition> partitions) {
+    partitions.forEach(
+        partition -> {
+          final var partitionDto = new io.camunda.zeebe.gateway.protocol.rest.Partition();
 
-              partition.setPartitionId(partitionId);
-              final var isRoleSet = setRole(brokerId, partitionId, topology, partition);
-              if (!isRoleSet) {
-                return;
-              }
-
-              final var status = topology.getPartitionHealth(brokerId, partitionId);
-              switch (status) {
-                case HEALTHY -> partition.setHealth(HealthEnum.HEALTHY);
-                case UNHEALTHY -> partition.setHealth(HealthEnum.UNHEALTHY);
-                case DEAD -> partition.setHealth(HealthEnum.DEAD);
-                default ->
-                    Loggers.REST_LOGGER.debug(
-                        "Unsupported partition broker health status '{}'", status.name());
-              }
-              brokerInfo.addPartitionsItem(partition);
-            });
-  }
-
-  private boolean setRole(
-      final Integer brokerId,
-      final Integer partitionId,
-      final BrokerClusterState topology,
-      final Partition partition) {
-    final int partitionLeader = topology.getLeaderForPartition(partitionId);
-    final Set<Integer> partitionFollowers = topology.getFollowersForPartition(partitionId);
-    final Set<Integer> partitionInactives = topology.getInactiveNodesForPartition(partitionId);
-
-    if (partitionLeader == brokerId) {
-      partition.setRole(RoleEnum.LEADER);
-    } else if (partitionFollowers != null && partitionFollowers.contains(brokerId)) {
-      partition.setRole(RoleEnum.FOLLOWER);
-    } else if (partitionInactives != null && partitionInactives.contains(brokerId)) {
-      partition.setRole(RoleEnum.INACTIVE);
-    } else {
-      return false;
-    }
-
-    return true;
+          partitionDto.setPartitionId(partition.partitionId());
+          partitionDto.setRole(EnumUtil.convert(partition.role(), RoleEnum.class));
+          partitionDto.setHealth(EnumUtil.convert(partition.health(), HealthEnum.class));
+          brokerInfo.addPartitionsItem(partitionDto);
+        });
   }
 }

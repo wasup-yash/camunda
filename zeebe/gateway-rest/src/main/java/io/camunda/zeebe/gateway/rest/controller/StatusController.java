@@ -7,11 +7,9 @@
  */
 package io.camunda.zeebe.gateway.rest.controller;
 
-import io.camunda.zeebe.broker.client.api.BrokerClient;
-import io.camunda.zeebe.broker.client.api.BrokerClusterState;
+import io.camunda.service.TopologyServices;
+import io.camunda.service.TopologyServices.ClusterStatus;
 import io.camunda.zeebe.gateway.rest.annotation.CamundaGetMapping;
-import io.camunda.zeebe.protocol.record.PartitionHealthStatus;
-import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,31 +17,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @CamundaRestController
 @RequestMapping("/v2")
 public class StatusController {
-  private final BrokerClient client;
 
-  public StatusController(final BrokerClient client) {
-    this.client = client;
+  private final TopologyServices topologyServices;
+
+  public StatusController(final TopologyServices topologyServices) {
+    this.topologyServices = topologyServices;
   }
 
   @CamundaGetMapping(path = "/status")
   public ResponseEntity<Void> getStatus() {
-    if (!hasAPartitionWithAHealthyLeader()) {
-      return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
-    }
-
-    return ResponseEntity.noContent().build();
-  }
-
-  private boolean hasAPartitionWithAHealthyLeader() {
-    final BrokerClusterState topology = client.getTopologyManager().getTopology();
-    final List<Integer> partitions = topology.getPartitions();
-
-    return partitions.stream()
-        .anyMatch(
-            partition -> {
-              final int leader = topology.getLeaderForPartition(partition);
-              return topology.getPartitionHealth(leader, partition)
-                  == PartitionHealthStatus.HEALTHY;
-            });
+    return ClusterStatus.HEALTHY.equals(topologyServices.getStatus())
+        ? ResponseEntity.noContent().build()
+        : ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
   }
 }
