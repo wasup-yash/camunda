@@ -21,6 +21,7 @@ import io.camunda.service.TopologyServices.Topology;
 import io.camunda.zeebe.gateway.rest.RestControllerTest;
 import io.camunda.zeebe.util.VersionUtil;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -131,7 +132,8 @@ public class TopologyControllerTest extends RestControllerTest {
             3,
             version,
             1L);
-    Mockito.when(topologyServices.getTopology()).thenReturn(topology);
+    Mockito.when(topologyServices.getTopology())
+        .thenReturn(CompletableFuture.completedFuture(topology));
 
     // when / then
     webClient
@@ -161,7 +163,9 @@ public class TopologyControllerTest extends RestControllerTest {
         """
             .formatted(version);
     Mockito.when(topologyServices.getTopology())
-        .thenReturn(new Topology(List.of(), null, null, null, null, version, null));
+        .thenReturn(
+            CompletableFuture.completedFuture(
+                new Topology(List.of(), null, null, null, null, version, null)));
 
     // when / then
     webClient

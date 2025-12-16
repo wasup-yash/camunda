@@ -16,6 +16,7 @@ import io.camunda.security.auth.CamundaAuthenticationProvider;
 import io.camunda.service.TopologyServices;
 import io.camunda.service.TopologyServices.ClusterStatus;
 import io.camunda.zeebe.gateway.rest.RestControllerTest;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -41,7 +42,8 @@ class StatusControllerTest extends RestControllerTest {
   @Test
   void shouldReturnNoContentWhenHealthy() {
     // given
-    when(topologyServices.getStatus()).thenReturn(ClusterStatus.HEALTHY);
+    when(topologyServices.getStatus())
+        .thenReturn(CompletableFuture.completedFuture(ClusterStatus.HEALTHY));
 
     // when / then
     webClient
@@ -58,7 +60,8 @@ class StatusControllerTest extends RestControllerTest {
   @Test
   void shouldReturnServiceUnavailableWhenNoPartitionHasHealthyLeader() {
     // given
-    when(topologyServices.getStatus()).thenReturn(ClusterStatus.UNHEALTHY);
+    when(topologyServices.getStatus())
+        .thenReturn(CompletableFuture.completedFuture(ClusterStatus.UNHEALTHY));
 
     // when / then
     webClient

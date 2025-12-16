@@ -7,9 +7,12 @@
  */
 package io.camunda.zeebe.gateway.rest.controller;
 
+import io.camunda.security.auth.CamundaAuthenticationProvider;
 import io.camunda.service.TopologyServices;
 import io.camunda.service.TopologyServices.ClusterStatus;
 import io.camunda.zeebe.gateway.rest.annotation.CamundaGetMapping;
+import io.camunda.zeebe.gateway.rest.mapper.RequestMapper;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,14 +22,27 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class StatusController {
 
   private final TopologyServices topologyServices;
+  private final CamundaAuthenticationProvider authenticationProvider;
 
-  public StatusController(final TopologyServices topologyServices) {
+  public StatusController(
+      final TopologyServices topologyServices,
+      final CamundaAuthenticationProvider authenticationProvider) {
     this.topologyServices = topologyServices;
+    this.authenticationProvider = authenticationProvider;
   }
 
   @CamundaGetMapping(path = "/status")
-  public ResponseEntity<Void> getStatus() {
-    return ClusterStatus.HEALTHY.equals(topologyServices.getStatus())
+  public CompletableFuture<ResponseEntity<Object>> getStatus() {
+    return RequestMapper.executeServiceMethod(
+        () ->
+            topologyServices
+                .withAuthentication(authenticationProvider.getCamundaAuthentication())
+                .getStatus(),
+        StatusController::getStatusResponse);
+  }
+
+  private static ResponseEntity<Object> getStatusResponse(final ClusterStatus clusterStatus) {
+    return ClusterStatus.HEALTHY.equals(clusterStatus)
         ? ResponseEntity.noContent().build()
         : ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
   }

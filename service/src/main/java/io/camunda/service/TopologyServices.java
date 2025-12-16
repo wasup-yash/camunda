@@ -18,6 +18,7 @@ import io.camunda.zeebe.protocol.record.PartitionHealthStatus;
 import io.camunda.zeebe.util.VersionUtil;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,12 +50,12 @@ public final class TopologyServices extends ApiServices<TopologyServices> {
         brokerRequestAuthorizationConverter);
   }
 
-  public ClusterStatus getStatus() {
+  public CompletableFuture<ClusterStatus> getStatus() {
     if (!hasAPartitionWithAHealthyLeader()) {
-      return ClusterStatus.UNHEALTHY;
+      return CompletableFuture.completedFuture(ClusterStatus.UNHEALTHY);
     }
 
-    return ClusterStatus.HEALTHY;
+    return CompletableFuture.completedFuture(ClusterStatus.HEALTHY);
   }
 
   private boolean hasAPartitionWithAHealthyLeader() {
@@ -70,7 +71,7 @@ public final class TopologyServices extends ApiServices<TopologyServices> {
             });
   }
 
-  public Topology getTopology() {
+  public CompletableFuture<Topology> getTopology() {
     final var topology = Topology.Builder.create();
     final var clusterState = brokerClient.getTopologyManager().getTopology();
 
@@ -99,7 +100,7 @@ public final class TopologyServices extends ApiServices<TopologyServices> {
               });
     }
 
-    return topology.build();
+    return CompletableFuture.completedFuture(topology.build());
   }
 
   private void addBrokerInfo(
