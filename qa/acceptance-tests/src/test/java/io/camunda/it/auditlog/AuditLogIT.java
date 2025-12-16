@@ -37,7 +37,6 @@ import java.util.Set;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
@@ -243,7 +242,7 @@ public class AuditLogIT {
     }
   }
 
-  @Disabled("https://github.com/camunda/camunda/issues/42789")
+  //  @Disabled("https://github.com/camunda/camunda/issues/42789")
   @Test
   void shouldIsolateAuditLogsByTenant(
       @Authenticated(USER_A_USERNAME) final CamundaClient userAClient,
@@ -316,7 +315,7 @@ public class AuditLogIT {
             });
   }
 
-  @Disabled("https://github.com/camunda/camunda/issues/41120")
+  //  @Disabled("https://github.com/camunda/camunda/issues/41120")
   @Test
   void shouldNotSeeOperatorAuditLogsWithOnlyAdminCategoryPermission(
       @Authenticated(USER_C_USERNAME) final CamundaClient userCClient) {
@@ -373,7 +372,7 @@ public class AuditLogIT {
             });
   }
 
-  @Disabled("https://github.com/camunda/camunda/issues/41120")
+  //  @Disabled("https://github.com/camunda/camunda/issues/41120")
   @Test
   void shouldOnlySeeAuditLogsForAuthorizedProcessDefinition(
       @Authenticated(USER_D_USERNAME) final CamundaClient userDClient) {

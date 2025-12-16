@@ -10,24 +10,24 @@ package io.camunda.search.clients.transformers.filter;
 import static io.camunda.search.clients.query.SearchQueryBuilders.and;
 import static io.camunda.search.clients.query.SearchQueryBuilders.dateTimeOperations;
 import static io.camunda.search.clients.query.SearchQueryBuilders.longOperations;
-import static io.camunda.search.clients.query.SearchQueryBuilders.matchAll;
+import static io.camunda.search.clients.query.SearchQueryBuilders.or;
 import static io.camunda.search.clients.query.SearchQueryBuilders.stringOperations;
+import static io.camunda.search.clients.query.SearchQueryBuilders.stringTerms;
+import static io.camunda.search.clients.query.SearchQueryBuilders.term;
 import static io.camunda.webapps.schema.descriptors.template.AuditLogTemplate.*;
 
 import io.camunda.search.clients.query.SearchQuery;
 import io.camunda.search.filter.AuditLogFilter;
 import io.camunda.security.auth.Authorization;
+import io.camunda.security.reader.TenantCheck;
 import io.camunda.webapps.schema.descriptors.IndexDescriptor;
+import io.camunda.webapps.schema.entities.auditlog.AuditLogTenantScope;
+import java.util.Optional;
 
 public class AuditLogFilterTransformer extends IndexFilterTransformer<AuditLogFilter> {
 
   public AuditLogFilterTransformer(final IndexDescriptor indexDescriptor) {
     super(indexDescriptor);
-  }
-
-  @Override
-  protected SearchQuery toAuthorizationCheckSearchQuery(final Authorization<?> authorization) {
-    return matchAll();
   }
 
   @Override
@@ -55,5 +55,29 @@ public class AuditLogFilterTransformer extends IndexFilterTransformer<AuditLogFi
         stringOperations(TENANT_ID, filter.tenantIdOperations()),
         dateTimeOperations(TIMESTAMP, filter.timestampOperations()),
         longOperations(USER_TASK_KEY, filter.userTaskKeyOperations()));
+  }
+
+  @Override
+  protected SearchQuery toTenantCheckSearchQuery(
+      final TenantCheck tenantCheck, final String field) {
+    final var tenantCheckQuery =
+        Optional.of(tenantCheck)
+            .map(TenantCheck::tenantIds)
+            .filter(t -> !t.isEmpty())
+            .map(t -> stringTerms(field, t))
+            .orElse(null);
+
+    final var matchGlobalQuery = term(TENANT_SCOPE, AuditLogTenantScope.GLOBAL.name());
+
+    return or(matchGlobalQuery, tenantCheckQuery);
+  }
+
+  @Override
+  protected SearchQuery toAuthorizationCheckSearchQuery(final Authorization<?> authorization) {
+    final var categoryQuery = stringTerms(CATEGORY, authorization.resourceIds());
+    final var processDefinitionQuery =
+        stringTerms(PROCESS_DEFINITION_ID, authorization.resourceIds());
+
+    return or(categoryQuery, processDefinitionQuery);
   }
 }

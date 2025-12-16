@@ -45,6 +45,7 @@ public class AuditLogTemplate extends AbstractTemplateDescriptor
   public static final String RESOURCE_KEY = "resourceKey";
   public static final String RESULT = "result";
   public static final String TENANT_ID = "tenantId";
+  public static final String TENANT_SCOPE = "tenantScope";
   public static final String TIMESTAMP = "timestamp";
   public static final String USER_TASK_KEY = "userTaskKey";
   public static final String ROOT_PROCESS_INSTANCE_KEY = "rootProcessInstanceKey";
