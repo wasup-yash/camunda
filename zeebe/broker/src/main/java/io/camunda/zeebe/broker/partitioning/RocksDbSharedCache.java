@@ -54,7 +54,7 @@ public class RocksDbSharedCache {
     final MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
 
     // This is the largest size the JVM Heap is allowed to grow to. -XX:MaxRAMPercentage.
-    final long maxHeapBytes = memoryBean.getHeapMemoryUsage().getMax();
+    long maxHeapBytes = memoryBean.getHeapMemoryUsage().getMax();
     // Get Maximum Non-Heap Size, -XX:MaxMetaspaceSize
     long maxNonHeapBytes = memoryBean.getNonHeapMemoryUsage().getMax();
     // both return -1 if not defined.
@@ -63,19 +63,19 @@ public class RocksDbSharedCache {
     if (maxNonHeapBytes < 0) {
       maxNonHeapBytes = Math.round(0.25 * totalMemorySize);
       LOGGER.info(
-          "Warning: Non-Heap limit is not set. Using a assumption of 25% of "
+          "Warning: Non-Heap limit is not set. Using an assumption of 25% of "
               + "total RAM :{} Bytes for safety, for RocksDB memory calculation."
               + "Consider setting -XX:MaxMetaspaceSize explicitly.",
           maxNonHeapBytes);
     }
     // -XX:MaxRAMPercentage is almost always set, but in case it is removed.
     if (maxHeapBytes < 0) {
-      final long assumedHeap = Math.round(0.25 * totalMemorySize);
+      maxHeapBytes = Math.round(0.25 * totalMemorySize);
       LOGGER.info(
-          "Warning: Heap limit is not set. Using a assumption of 25% of "
+          "Warning: Heap limit is not set. Using an assumption of 25% of "
               + "total RAM :{} Bytes for safety, for RocksDB memory calculation."
               + "Consider setting -XX:MaxRAMPercentage explicitly.",
-          assumedHeap);
+          maxHeapBytes);
     }
 
     // Estimate Total JVM Memory Usage (Heap + Non-Heap)
