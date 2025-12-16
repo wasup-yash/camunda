@@ -11,6 +11,7 @@ import io.atomix.utils.net.Address;
 import io.camunda.security.auth.BrokerRequestAuthorizationConverter;
 import io.camunda.security.auth.CamundaAuthentication;
 import io.camunda.service.TopologyServices.Topology.Builder;
+import io.camunda.service.exception.ErrorMapper;
 import io.camunda.service.security.SecurityContextProvider;
 import io.camunda.zeebe.broker.client.api.BrokerClient;
 import io.camunda.zeebe.broker.client.api.BrokerClusterState;
@@ -51,11 +52,15 @@ public final class TopologyServices extends ApiServices<TopologyServices> {
   }
 
   public CompletableFuture<ClusterStatus> getStatus() {
-    if (!hasAPartitionWithAHealthyLeader()) {
-      return CompletableFuture.completedFuture(ClusterStatus.UNHEALTHY);
-    }
+    try {
+      if (!hasAPartitionWithAHealthyLeader()) {
+        return CompletableFuture.completedFuture(ClusterStatus.UNHEALTHY);
+      }
 
-    return CompletableFuture.completedFuture(ClusterStatus.HEALTHY);
+      return CompletableFuture.completedFuture(ClusterStatus.HEALTHY);
+    } catch (final Exception ex) {
+      return CompletableFuture.failedFuture(ErrorMapper.mapError(ex));
+    }
   }
 
   private boolean hasAPartitionWithAHealthyLeader() {
@@ -72,35 +77,39 @@ public final class TopologyServices extends ApiServices<TopologyServices> {
   }
 
   public CompletableFuture<Topology> getTopology() {
-    final var topology = Topology.Builder.create();
-    final var clusterState = brokerClient.getTopologyManager().getTopology();
+    try {
+      final var topology = Topology.Builder.create();
+      final var clusterState = brokerClient.getTopologyManager().getTopology();
 
-    final var gatewayVersion = VersionUtil.getVersion();
-    if (gatewayVersion != null && !gatewayVersion.isBlank()) {
-      topology.gatewayVersion(gatewayVersion);
+      final var gatewayVersion = VersionUtil.getVersion();
+      if (gatewayVersion != null && !gatewayVersion.isBlank()) {
+        topology.gatewayVersion(gatewayVersion);
+      }
+
+      if (clusterState != null) {
+        topology
+            .clusterId(clusterState.getClusterId())
+            .clusterSize(clusterState.getClusterSize())
+            .partitionsCount(clusterState.getPartitionsCount())
+            .replicationFactor(clusterState.getReplicationFactor())
+            .lastCompletedChangeId(clusterState.getLastCompletedChangeId());
+
+        clusterState
+            .getBrokers()
+            .forEach(
+                brokerId -> {
+                  final var broker = Broker.Builder.create();
+                  addBrokerInfo(broker, brokerId, clusterState);
+                  addPartitionInfoToBrokerInfo(broker, brokerId, clusterState);
+
+                  topology.addBroker(broker.build());
+                });
+      }
+
+      return CompletableFuture.completedFuture(topology.build());
+    } catch (final Exception ex) {
+      return CompletableFuture.failedFuture(ErrorMapper.mapError(ex));
     }
-
-    if (clusterState != null) {
-      topology
-          .clusterId(clusterState.getClusterId())
-          .clusterSize(clusterState.getClusterSize())
-          .partitionsCount(clusterState.getPartitionsCount())
-          .replicationFactor(clusterState.getReplicationFactor())
-          .lastCompletedChangeId(clusterState.getLastCompletedChangeId());
-
-      clusterState
-          .getBrokers()
-          .forEach(
-              brokerId -> {
-                final var broker = Broker.Builder.create();
-                addBrokerInfo(broker, brokerId, clusterState);
-                addPartitionInfoToBrokerInfo(broker, brokerId, clusterState);
-
-                topology.addBroker(broker.build());
-              });
-    }
-
-    return CompletableFuture.completedFuture(topology.build());
   }
 
   private void addBrokerInfo(
