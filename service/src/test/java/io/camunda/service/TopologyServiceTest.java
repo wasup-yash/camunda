@@ -73,7 +73,7 @@ public class TopologyServiceTest {
         .thenReturn(PartitionHealthStatus.UNHEALTHY);
 
     // when
-    final var status = services.getStatus();
+    final var status = services.getStatus().join();
 
     // then
     Assertions.assertThat(status).isEqualTo(ClusterStatus.HEALTHY);
@@ -105,7 +105,7 @@ public class TopologyServiceTest {
     when(clusterState.getPartitionHealth(leaderId2, partitionId2)).thenReturn(unhealthyStatus);
 
     // when
-    final var status = services.getStatus();
+    final var status = services.getStatus().join();
 
     // then
     Assertions.assertThat(status).isEqualTo(ClusterStatus.UNHEALTHY);
@@ -125,7 +125,7 @@ public class TopologyServiceTest {
     when(clusterState.getPartitions()).thenReturn(List.of());
 
     // when
-    final var status = services.getStatus();
+    final var status = services.getStatus().join();
 
     // then
     Assertions.assertThat(status).isEqualTo(ClusterStatus.UNHEALTHY);
@@ -158,7 +158,7 @@ public class TopologyServiceTest {
         .thenReturn(PartitionHealthStatus.HEALTHY);
 
     // when
-    final var status = services.getStatus();
+    final var status = services.getStatus().join();
 
     // then
     Assertions.assertThat(status).isEqualTo(ClusterStatus.HEALTHY);
@@ -211,7 +211,7 @@ public class TopologyServiceTest {
             1L);
 
     // when
-    final var topology = services.getTopology();
+    final var topology = services.getTopology().join();
 
     // then
     Assertions.assertThat(topology).isEqualTo(expectedTopology);
@@ -225,7 +225,7 @@ public class TopologyServiceTest {
     Mockito.when(topologyManager.getTopology()).thenReturn(null);
 
     // when
-    final var topology = services.getTopology();
+    final var topology = services.getTopology().join();
 
     // then
     Assertions.assertThat(topology).isEqualTo(expectedTopology);
