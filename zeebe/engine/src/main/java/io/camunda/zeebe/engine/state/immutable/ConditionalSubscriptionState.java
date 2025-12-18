@@ -13,6 +13,8 @@ public interface ConditionalSubscriptionState {
 
   boolean exists(String tenantId, long subscriptionKey);
 
+  boolean exists(long processDefinitionKey);
+
   /**
    * Visits all (except start event) conditional subscriptions for the given scope key.
    *
@@ -32,6 +34,6 @@ public interface ConditionalSubscriptionState {
 
   @FunctionalInterface
   interface ConditionalSubscriptionVisitor {
-    void visit(ConditionalSubscription subscription);
+    boolean visit(ConditionalSubscription subscription);
   }
 }

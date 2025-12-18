@@ -11,6 +11,7 @@ import io.camunda.zeebe.engine.processing.bpmn.BpmnElementContext;
 import io.camunda.zeebe.engine.processing.bpmn.BpmnElementContextImpl;
 import io.camunda.zeebe.engine.processing.bpmn.ProcessInstanceLifecycle;
 import io.camunda.zeebe.engine.processing.bpmn.behavior.BpmnStateBehavior;
+import io.camunda.zeebe.engine.processing.conditional.ConditionalBehavior;
 import io.camunda.zeebe.engine.processing.deployment.model.element.ExecutableFlowElement;
 import io.camunda.zeebe.engine.processing.deployment.model.element.ExecutableStartEvent;
 import io.camunda.zeebe.engine.processing.streamprocessor.writers.StateWriter;
@@ -48,7 +49,8 @@ public class EventTriggerBehavior {
       final CatchEventBehavior catchEventBehavior,
       final Writers writers,
       final ProcessingState processingState,
-      final BpmnStateBehavior stateBehavior) {
+      final BpmnStateBehavior stateBehavior,
+      final ConditionalBehavior conditionalBehavior) {
     this.keyGenerator = keyGenerator;
     this.catchEventBehavior = catchEventBehavior;
     commandWriter = writers.command();
@@ -58,7 +60,8 @@ public class EventTriggerBehavior {
     eventScopeInstanceState = processingState.getEventScopeInstanceState();
 
     variableBehavior =
-        new VariableBehavior(processingState.getVariableState(), writers.state(), keyGenerator);
+        new VariableBehavior(
+            processingState.getVariableState(), writers.state(), conditionalBehavior, keyGenerator);
     this.stateBehavior = stateBehavior;
   }
 

@@ -17,6 +17,7 @@ import io.camunda.zeebe.engine.processing.common.DecisionBehavior;
 import io.camunda.zeebe.engine.processing.common.ElementActivationBehavior;
 import io.camunda.zeebe.engine.processing.common.EventTriggerBehavior;
 import io.camunda.zeebe.engine.processing.common.ExpressionProcessor;
+import io.camunda.zeebe.engine.processing.conditional.ConditionalBehavior;
 import io.camunda.zeebe.engine.processing.expression.CombinedEvaluationContext;
 import io.camunda.zeebe.engine.processing.expression.ExpressionBehavior;
 import io.camunda.zeebe.engine.processing.expression.GlobalScopeClusterVariableEvaluationContext;
@@ -60,6 +61,7 @@ public final class BpmnBehaviorsImpl implements BpmnBehaviors {
   private final BpmnCompensationSubscriptionBehaviour compensationSubscriptionBehaviour;
   private final JobUpdateBehaviour jobUpdateBehaviour;
   private final BpmnAdHocSubProcessBehavior adHocSubProcessBehavior;
+  private final ConditionalBehavior conditionalBehavior;
   private final ExpressionBehavior expressionBehavior;
   private final ExpressionLanguage expressionLanguage;
 
@@ -116,9 +118,16 @@ public final class BpmnBehaviorsImpl implements BpmnBehaviors {
 
     expressionBehavior = new ExpressionBehavior(namespaceFullClusterContext, expressionLanguage);
 
+    conditionalBehavior =
+        new ConditionalBehavior(
+            processingState, writers.command(), expressionProcessor, expressionLanguage);
+
     variableBehavior =
         new VariableBehavior(
-            processingState.getVariableState(), writers.state(), processingState.getKeyGenerator());
+            processingState.getVariableState(),
+            writers.state(),
+            conditionalBehavior,
+            processingState.getKeyGenerator());
 
     catchEventBehavior =
         new CatchEventBehavior(
@@ -140,7 +149,8 @@ public final class BpmnBehaviorsImpl implements BpmnBehaviors {
             catchEventBehavior,
             writers,
             processingState,
-            stateBehavior);
+            stateBehavior,
+            conditionalBehavior);
 
     bpmnDecisionBehavior =
         new BpmnDecisionBehavior(
