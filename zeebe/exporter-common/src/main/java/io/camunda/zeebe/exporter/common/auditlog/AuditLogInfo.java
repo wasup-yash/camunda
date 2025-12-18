@@ -25,6 +25,7 @@ import io.camunda.zeebe.protocol.record.intent.ProcessInstanceCreationIntent;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceIntent;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceMigrationIntent;
 import io.camunda.zeebe.protocol.record.intent.ProcessInstanceModificationIntent;
+import io.camunda.zeebe.protocol.record.intent.RoleIntent;
 import io.camunda.zeebe.protocol.record.intent.UserIntent;
 import io.camunda.zeebe.protocol.record.intent.VariableIntent;
 import java.util.Map;
@@ -168,6 +169,17 @@ public record AuditLogInfo(
 
       case ProcessInstanceModificationIntent.MODIFIED:
         return AuditLogOperationType.MODIFY;
+
+      case RoleIntent.CREATED:
+        return AuditLogOperationType.CREATE;
+      case RoleIntent.UPDATED:
+        return AuditLogOperationType.UPDATE;
+      case RoleIntent.DELETED:
+        return AuditLogOperationType.DELETE;
+      case RoleIntent.ENTITY_ADDED:
+        return AuditLogOperationType.ASSIGN;
+      case RoleIntent.ENTITY_REMOVED:
+        return AuditLogOperationType.UNASSIGN;
 
       case UserIntent.CREATED:
         return AuditLogOperationType.CREATE;

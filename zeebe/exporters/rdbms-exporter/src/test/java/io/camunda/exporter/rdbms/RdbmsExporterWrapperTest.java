@@ -27,6 +27,8 @@ import io.camunda.exporter.rdbms.handlers.auditlog.ProcessInstanceCancelAuditLog
 import io.camunda.exporter.rdbms.handlers.auditlog.ProcessInstanceCreationAuditLogTransformer;
 import io.camunda.exporter.rdbms.handlers.auditlog.ProcessInstanceMigrationAuditLogTransformer;
 import io.camunda.exporter.rdbms.handlers.auditlog.ProcessInstanceModificationAuditLogTransformer;
+import io.camunda.exporter.rdbms.handlers.auditlog.RoleAuditLogTransformer;
+import io.camunda.exporter.rdbms.handlers.auditlog.RoleEntityAuditLogTransformer;
 import io.camunda.exporter.rdbms.handlers.auditlog.UserAuditLogTransformer;
 import io.camunda.exporter.rdbms.handlers.auditlog.VariableAddUpdateAuditLogTransformer;
 import io.camunda.zeebe.exporter.api.context.Context;
@@ -106,6 +108,8 @@ class RdbmsExporterWrapperTest {
             Map.entry(
                 ProcessInstanceModificationAuditLogTransformer.class,
                 ValueType.PROCESS_INSTANCE_MODIFICATION),
+            Map.entry(RoleAuditLogTransformer.class, ValueType.ROLE),
+            Map.entry(RoleEntityAuditLogTransformer.class, ValueType.ROLE),
             Map.entry(UserAuditLogTransformer.class, ValueType.USER),
             Map.entry(VariableAddUpdateAuditLogTransformer.class, ValueType.VARIABLE));
 
