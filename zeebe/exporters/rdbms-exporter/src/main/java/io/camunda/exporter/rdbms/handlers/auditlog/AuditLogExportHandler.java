@@ -77,8 +77,7 @@ public class AuditLogExportHandler<R extends RecordValue> implements RdbmsExport
   private AuditLogDbModel map(final Record<R> record) {
     final var info = AuditLogInfo.of(record);
     final var key =
-        RandomStringUtils.insecure()
-            .nextAlphanumeric(vendorDatabaseProperties.userCharColumnSize());
+        RandomStringUtils.insecure().nextAlphanumeric(vendorDatabaseProperties.varcharIndexSize());
 
     final var auditLog =
         new AuditLogDbModel.Builder()

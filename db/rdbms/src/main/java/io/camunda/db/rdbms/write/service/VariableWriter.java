@@ -42,7 +42,7 @@ public class VariableWriter implements RdbmsWriter {
             variable.variableKey(),
             "io.camunda.db.rdbms.sql.VariableMapper.insert",
             variable.truncateValue(
-                vendorDatabaseProperties.variableValuePreviewSize(),
+                vendorDatabaseProperties.varcharSize(),
                 vendorDatabaseProperties.charColumnMaxBytes())));
   }
 
@@ -54,7 +54,7 @@ public class VariableWriter implements RdbmsWriter {
             variable.variableKey(),
             "io.camunda.db.rdbms.sql.VariableMapper.update",
             variable.truncateValue(
-                vendorDatabaseProperties.variableValuePreviewSize(),
+                vendorDatabaseProperties.varcharSize(),
                 vendorDatabaseProperties.charColumnMaxBytes())));
   }
 

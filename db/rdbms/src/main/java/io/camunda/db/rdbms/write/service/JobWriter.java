@@ -42,7 +42,7 @@ public class JobWriter implements RdbmsWriter {
             job.jobKey(),
             "io.camunda.db.rdbms.sql.JobMapper.insert",
             job.truncateErrorMessage(
-                vendorDatabaseProperties.errorMessageSize(),
+                vendorDatabaseProperties.varcharSize(),
                 vendorDatabaseProperties.charColumnMaxBytes())));
   }
 

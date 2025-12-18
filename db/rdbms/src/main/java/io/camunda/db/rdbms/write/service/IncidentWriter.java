@@ -50,7 +50,7 @@ public class IncidentWriter implements RdbmsWriter {
             incident.incidentKey(),
             "io.camunda.db.rdbms.sql.IncidentMapper.insert",
             incident.truncateErrorMessage(
-                vendorDatabaseProperties.errorMessageSize(),
+                vendorDatabaseProperties.varcharSize(),
                 vendorDatabaseProperties.charColumnMaxBytes())));
   }
 
@@ -62,7 +62,7 @@ public class IncidentWriter implements RdbmsWriter {
             incident.incidentKey(),
             "io.camunda.db.rdbms.sql.IncidentMapper.update",
             incident.truncateErrorMessage(
-                vendorDatabaseProperties.errorMessageSize(),
+                vendorDatabaseProperties.varcharSize(),
                 vendorDatabaseProperties.charColumnMaxBytes())));
   }
 
