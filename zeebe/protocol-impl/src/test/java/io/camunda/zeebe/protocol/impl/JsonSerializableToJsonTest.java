@@ -3479,6 +3479,8 @@ final class JsonSerializableToJsonTest {
                             .setPassword("qux"))
                     .setDefaultTenant(
                         new TenantRecord().setTenantKey(5).setTenantId("id").setName("name"))
+                    .addTenant(
+                        new TenantRecord().setTenantKey(42).setTenantId("foo").setName("Foo"))
                     .addTenantMember(
                         new TenantRecord()
                             .setTenantId("id")
@@ -3552,6 +3554,16 @@ final class JsonSerializableToJsonTest {
                     "entityId": "",
                     "entityType": "UNSPECIFIED"
                   },
+                  "tenants": [
+                    {
+                      "tenantKey": 42,
+                      "tenantId": "foo",
+                      "name": "Foo",
+                      "description": "",
+                      "entityId": "",
+                      "entityType": "UNSPECIFIED"
+                    }
+                  ],
                   "tenantMembers": [
                     {
                       "tenantKey": -1,
@@ -3616,6 +3628,7 @@ final class JsonSerializableToJsonTest {
                         "entityId": "",
                         "entityType": "UNSPECIFIED"
                     },
+                    "tenants": [],
                     "mappingRules": [],
                     "roleMembers": [],
                     "tenantMembers": [],
