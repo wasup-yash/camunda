@@ -202,7 +202,7 @@ public class DbConditionalSubscriptionState implements MutableConditionalSubscri
     final DbInt dbInt = processDefinitionKeyCountColumnFamily.get(processDefinitionKey);
     if (dbInt != null) {
       final int newCount = dbInt.getValue() - 1;
-      if (newCount == 0) {
+      if (newCount <= 0) {
         processDefinitionKeyCountColumnFamily.deleteExisting(processDefinitionKey);
       } else {
         subscriptionCount.wrapInt(newCount);
