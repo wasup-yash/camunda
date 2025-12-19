@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 public class RocksDbSharedCache {
   public static final long MINIMUM_PARTITION_MEMORY_LIMIT = 32 * 1024 * 1024L;
-  private static final double MAX_ROCKSDB_MEMORY_FRACTION = 0.5;
   private static final double ROCKSDB_OVERHEAD_FACTOR = 0.15;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RocksDbSharedCache.class);
@@ -92,22 +91,24 @@ public class RocksDbSharedCache {
     final long blockCacheBytes = getBlockCacheBytes(rocksdbCfg, partitionsCount);
     final long totalMemorySize =
         ((OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()).getTotalMemorySize();
-    // Heap by default is 25% of the RAM, and off-heap (unless configured otherwise) is the same.
-    // So 50% of your RAM goes to the JVM, for both heap and off-heap (aka direct) memory.
-    // Leaving 50% of RAM for OS page cache and other processes.
 
-    final long maxRocksDbMem = (long) (totalMemorySize * MAX_ROCKSDB_MEMORY_FRACTION);
+    if (rocksdbCfg.getMaxMemoryFraction() > 0 && rocksdbCfg.getMaxMemoryFraction() <= 1.0) {
+      final double maxMemoryFraction = rocksdbCfg.getMaxMemoryFraction();
+      final long maxRocksDbMem = (long) (totalMemorySize * maxMemoryFraction);
 
-    if (blockCacheBytes > maxRocksDbMem
-        && rocksdbCfg.getMemoryAllocationStrategy() != MemoryAllocationStrategy.AUTO) {
-      // this check does not apply for AUTO strategy as it is calculated
-      // based on available memory
-      throw new IllegalArgumentException(
-          String.format(
-              "Expected the allocated memory for RocksDB to be below or "
-                  + "equal %.2f %% of ram memory, but was %.2f %%.",
-              MAX_ROCKSDB_MEMORY_FRACTION * 100,
-              ((double) blockCacheBytes / totalMemorySize * 100)));
+      if (blockCacheBytes > maxRocksDbMem
+          && rocksdbCfg.getMemoryAllocationStrategy() != MemoryAllocationStrategy.AUTO) {
+        // this check does not apply for AUTO strategy as it is calculated
+        // based on available memory
+        throw new IllegalArgumentException(
+            String.format(
+                "Expected the allocated memory for RocksDB to be below or "
+                    + "equal %.2f %% of ram memory, but was %.2f %%.",
+                maxMemoryFraction * 100, ((double) blockCacheBytes / totalMemorySize * 100)));
+      }
+    } else {
+      LOGGER.debug(
+          "Max Memory check for RocksDB is disabled. This can be configured setting ZEEBE_BROKER_EXPERIMENTAL_ROCKSDB_MAXMEMORYFRACTION with a value between 0 and 1 to set the max fraction that RocksDB can take of total RAM memory.");
     }
 
     if (blockCacheBytes / partitionsCount < MINIMUM_PARTITION_MEMORY_LIMIT) {
