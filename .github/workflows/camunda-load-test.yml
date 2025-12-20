@@ -297,11 +297,15 @@ jobs:
             --set global.postgresql.auth.database=camunda \
             --set global.postgresql.auth.username=camunda \
             --set global.postgresql.auth.password=camunda \
+            --set global.postgresql.auth.postgresPassword=camunda \
+            --set postgresqlSharedPreloadLibraries=pg_stat_statements \
+            --set postgresql.postgresqlSharedPreloadLibraries=pg_stat_statements \
+            --set primary.postgresql.postgresqlSharedPreloadLibraries=pg_stat_statements \
             --set primary.resources.requests.memory=4Gi \
             --set primary.resources.requests.cpu=3000m \
             --set primary.resources.limits.memory=6Gi \
             --set primary.resources.limits.cpu=6000m \
-            --set primary.persistence.size=10Gi
+            --set primary.persistence.size=128Gi
       - name: Add Camunda Helm repo
         run: |
           helm repo add camunda https://helm.camunda.io/
