@@ -25,6 +25,7 @@ import io.camunda.operate.schema.indices.OperateWebSessionIndex;
 import io.camunda.operate.store.UserStore;
 import io.camunda.operate.store.elasticsearch.ElasticsearchTaskStore;
 import io.camunda.operate.store.elasticsearch.RetryElasticsearchClient;
+import io.camunda.operate.util.RestTemplateNoRedirectFollowConfiguration;
 import io.camunda.operate.util.apps.nobeans.TestApplicationWithNoBeans;
 import io.camunda.operate.webapp.elasticsearch.ElasticsearchSessionRepository;
 import io.camunda.operate.webapp.rest.AuthenticationRestService;
@@ -91,7 +92,8 @@ import org.springframework.test.context.junit4.SpringRunner;
       ElasticsearchSessionRepository.class,
       JacksonConfig.class,
       OperateDateTimeFormatter.class,
-      DatabaseInfo.class
+      DatabaseInfo.class,
+      RestTemplateNoRedirectFollowConfiguration.class,
     },
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {

@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.operate.OperateProfileService;
 import io.camunda.operate.management.IndicesCheck;
 import io.camunda.operate.property.OperateProperties;
+import io.camunda.operate.util.RestTemplateNoRedirectFollowConfiguration;
 import io.camunda.operate.util.SpringContextHolder;
 import io.camunda.operate.util.apps.nobeans.TestApplicationWithNoBeans;
 import io.camunda.operate.webapp.controllers.OperateIndexController;
@@ -71,6 +72,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.rules.SpringClassRule;
 import org.springframework.test.context.junit4.rules.SpringMethodRule;
 import org.springframework.web.client.RestTemplate;
@@ -93,6 +95,7 @@ import org.springframework.web.client.RestTemplate;
       OperateProfileService.class,
       OperateIndexController.class,
       WebappsModuleConfiguration.class,
+      RestTemplateNoRedirectFollowConfiguration.class,
     },
     properties = {
       "server.servlet.context-path=" + AuthenticationIT.CONTEXT_PATH,
@@ -108,6 +111,7 @@ import org.springframework.web.client.RestTemplate;
       "camunda.operate.cloud.consoleUrl=https://consoleUrl",
     },
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = {"spring.test.resttemplate.follow-redirects=false"})
 @ActiveProfiles({SSO_AUTH_PROFILE, "test"})
 public class AuthenticationIT implements AuthenticationTestable {
 
